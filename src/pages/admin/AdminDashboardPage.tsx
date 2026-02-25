@@ -16,12 +16,10 @@ export const AdminDashboardPage = () => {
   const progress = totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100)
 
   return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="text-lg font-semibold text-slate-50">Teacher Dashboard</h1>
-        <p className="text-sm text-slate-400">
-          Monitor project progress, milestones, and student engagement.
-        </p>
+    <div className="space-y-8">
+      <div className="space-y-2">
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-primary-400 to-accent-400 bg-clip-text text-transparent">Teacher Dashboard</h1>
+        <p className="text-base text-slate-300">Monitor project progress, milestones, and student engagement.</p>
       </div>
 
       <div className="grid gap-6 sm:grid-cols-3">

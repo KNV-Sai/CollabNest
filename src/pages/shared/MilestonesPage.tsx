@@ -19,12 +19,10 @@ export const MilestonesPage = ({ scope }: MilestonesPageProps) => {
   const totalTasks = project.tasks.length
 
   return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="text-lg font-semibold text-slate-50">Milestones</h1>
-        <p className="text-sm text-slate-400">
-          Track proposal, mid-sem, and final submission checkpoints.
-        </p>
+    <div className="space-y-8">
+      <div className="space-y-2">
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-primary-400 to-accent-400 bg-clip-text text-transparent">Milestones</h1>
+        <p className="text-base text-slate-300">Track proposal, mid-sem, and final submission checkpoints.</p>
       </div>
 
       <div className="space-y-3">

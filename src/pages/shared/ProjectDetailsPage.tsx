@@ -21,12 +21,10 @@ export const ProjectDetailsPage = ({ scope }: ProjectDetailsPageProps) => {
   const mentor = mockUsers.find((u) => u.id === project.mentorId)
 
   return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="text-lg font-semibold text-slate-50">Project Details</h1>
-        <p className="text-sm text-slate-400">
-          Overview of the group, mentor, and project scope.
-        </p>
+    <div className="space-y-8">
+      <div className="space-y-2">
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-primary-400 to-accent-400 bg-clip-text text-transparent">Project Details</h1>
+        <p className="text-base text-slate-300">Overview of the group, mentor, and project scope.</p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">

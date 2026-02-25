@@ -29,12 +29,10 @@ export const SubmissionPage = ({ scope }: SubmissionPageProps) => {
 
   if (scope === 'admin') {
     return (
-      <div className="space-y-5">
-        <div>
-          <h1 className="text-lg font-semibold text-slate-50">Final Submission</h1>
-          <p className="text-sm text-slate-400">
-            Review the group&apos;s final report or repository link.
-          </p>
+      <div className="space-y-8">
+        <div className="space-y-2">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary-400 to-accent-400 bg-clip-text text-transparent">Final Submission</h1>
+          <p className="text-base text-slate-300">Review the group&apos;s final report or repository link.</p>
         </div>
         <Card title="Submitted Link">
           {project.submissionUrl ? (
@@ -57,12 +55,10 @@ export const SubmissionPage = ({ scope }: SubmissionPageProps) => {
   }
 
   return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="text-lg font-semibold text-slate-50">Final Submission</h1>
-        <p className="text-sm text-slate-400">
-          Paste your GitHub repo, report link, or mock file URL.
-        </p>
+    <div className="space-y-8">
+      <div className="space-y-2">
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-primary-400 to-accent-400 bg-clip-text text-transparent">Final Submission</h1>
+        <p className="text-base text-slate-300">Paste your GitHub repo, report link, or mock file URL.</p>
       </div>
 
       <Card title="Upload (Mock)">

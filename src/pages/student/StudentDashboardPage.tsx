@@ -17,10 +17,10 @@ export const StudentDashboardPage = () => {
     myTasks.length === 0 ? 0 : Math.round((completed / myTasks.length) * 100)
 
   return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="text-lg font-semibold text-slate-50">My Workspace</h1>
-        <p className="text-sm text-slate-400">
+    <div className="space-y-8">
+      <div className="space-y-2">
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-primary-400 to-accent-400 bg-clip-text text-transparent">My Workspace</h1>
+        <p className="text-base text-slate-300">
           Track your tasks, milestones, and final submission for this project.
         </p>
       </div>

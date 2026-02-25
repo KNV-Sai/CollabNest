@@ -28,7 +28,7 @@ export const AppLayout = ({ children }) => {
   return (
     <div className="flex min-h-screen bg-slate-950 text-slate-50">
       <aside
-        className={`fixed inset-y-0 left-0 z-30 w-64 flex-col border-r border-slate-800 bg-slate-950/90 px-4 py-5 transform transition-transform duration-200 md:static md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-30 w-64 flex-col border-r border-slate-800 bg-gradient-to-br from-slate-950 via-slate-950 to-slate-900 px-4 py-5 transform transition-transform duration-200 md:static md:translate-x-0 ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
       >
