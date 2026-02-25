@@ -24,7 +24,7 @@ export const AdminDashboardPage = () => {
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-6 sm:grid-cols-3">
         <Card title="Overall Progress">
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs text-slate-300">

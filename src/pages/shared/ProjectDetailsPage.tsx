@@ -29,7 +29,7 @@ export const ProjectDetailsPage = ({ scope }: ProjectDetailsPageProps) => {
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-3">
         <Card title="Project Overview" className="md:col-span-2">
           <h2 className="text-sm font-semibold text-slate-100">{project.name}</h2>
           <p className="mt-1 text-xs text-primary-200">{project.course}</p>
@@ -44,7 +44,7 @@ export const ProjectDetailsPage = ({ scope }: ProjectDetailsPageProps) => {
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2">
         <Card title="Group Members">
           <ul className="space-y-1 text-xs">
             {students.map((s) => (
