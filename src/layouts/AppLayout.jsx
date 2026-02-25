@@ -2,6 +2,7 @@ import { Link, NavLink } from 'react-router-dom'
 import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { Button } from '../components/Button'
+import logo from '../assets/react.svg'
 
 const navItemsByRole = {
   admin: [
@@ -28,14 +29,12 @@ export const AppLayout = ({ children }) => {
   return (
     <div className="flex min-h-screen bg-slate-950 text-slate-50">
       <aside
-        className={`fixed inset-y-0 left-0 z-30 w-64 flex-col border-r border-slate-800 bg-gradient-to-br from-slate-950 via-slate-950 to-slate-900 px-4 py-5 transform transition-transform duration-200 md:static md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-30 w-64 flex-col bg-gradient-to-br from-slate-950 via-slate-950 to-slate-900 px-4 py-5 transform transition-transform duration-200 md:static md:translate-x-0 ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
       >
-        <Link to={role === 'admin' ? '/admin' : '/student'} className="mb-6 flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-600 text-sm font-bold">
-            CN
-          </div>
+        <Link to={role === 'admin' ? '/admin' : '/student'} className="mb-6 flex items-center gap-3">
+          <img src={logo} alt="CollabNest logo" className="h-8 w-8 object-contain" />
           <div>
             <div className="text-sm font-semibold tracking-tight">CollabNest</div>
             <div className="text-xs text-slate-400">Student Projects</div>
@@ -76,7 +75,7 @@ export const AppLayout = ({ children }) => {
         </div>
       </aside>
 
-      <div className="flex min-h-screen flex-1 flex-col md:pl-64">
+      <div className="flex min-h-screen flex-1 flex-col md:ml-64">
         <header className="flex items-center justify-between gap-3 border-b border-slate-800 bg-slate-950/80 px-4 py-3 backdrop-blur md:px-6">
           <div className="flex items-center gap-2 md:hidden">
             <button
@@ -89,7 +88,7 @@ export const AppLayout = ({ children }) => {
               </svg>
             </button>
             <div className="ml-2 flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-600 text-sm font-bold">CN</div>
+              <img src={logo} alt="CollabNest logo" className="h-8 w-8 object-contain" />
               <span className="text-sm font-semibold">CollabNest</span>
             </div>
           </div>
@@ -116,8 +115,8 @@ export const AppLayout = ({ children }) => {
           </div>
         </header>
 
-        <main className="flex-1 bg-gradient-to-br from-slate-950 via-slate-950 to-slate-900 px-4 py-5 md:px-6 md:py-6">
-          <div className="mx-auto max-w-6xl">{children}</div>
+        <main className="flex-1 bg-gradient-to-br from-slate-950 via-slate-950 to-slate-900 px-4 py-5 md:px-0 md:py-6">
+          <div className="w-full max-w-6xl pl-4 md:pl-0">{children}</div>
         </main>
       </div>
     </div>

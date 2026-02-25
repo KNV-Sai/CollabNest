@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { Button } from '../components/Button'
 import { SelectInput, TextInput } from '../components/FormControls'
+import bgImg from '../assets/bgdfordashboard.jpeg'
+import logo from '../assets/react.svg'
 
 export const LoginPage = () => {
   const { login } = useAuth()
@@ -20,12 +22,12 @@ export const LoginPage = () => {
   return (
     <div className="relative flex min-h-screen items-center justify-center px-4">
       <div className="absolute inset-0 -z-10">
-        <img src="/src/assets/bgdfordashboard.jpeg" alt="dashboard background" className="w-full h-full object-cover blur-md opacity-70" />
+        <img src={bgImg} alt="dashboard background" className="w-full h-full object-cover blur-md opacity-70" />
       </div>
 
       <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-950/80 p-6 shadow-xl shadow-slate-950/60 backdrop-blur-sm">
         <div className="mb-6 flex items-center gap-3">
-          <img src="/src/assets/react.svg" alt="CollabNest logo" className="h-10 w-10 object-contain" />
+          <img src={logo} alt="CollabNest logo" className="h-10 w-10 object-contain" />
           <div>
             <h1 className="text-base font-semibold text-slate-50">CollabNest</h1>
             <p className="text-xs text-slate-400">Role-based student project collaboration</p>
