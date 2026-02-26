@@ -20,7 +20,9 @@ export const StudentDashboardPage = () => {
     <div className="space-y-8">
       <div className="space-y-2">
         <h1 className="text-4xl font-bold bg-gradient-to-r from-primary-400 to-accent-400 bg-clip-text text-transparent">My Workspace</h1>
-        <p className="text-base text-slate-300">Track your tasks, milestones, and submissions for {project.name}</p>
+        <p className="text-base text-slate-300">
+          Coordinate tasks, track project milestones, and submit your group work.
+        </p>
       </div>
 
       <div className="grid gap-6 sm:grid-cols-3">

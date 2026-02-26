@@ -19,7 +19,7 @@ export const AdminDashboardPage = () => {
     <div className="space-y-8">
       <div className="space-y-2">
         <h1 className="text-4xl font-bold bg-gradient-to-r from-primary-400 to-accent-400 bg-clip-text text-transparent">Teacher Dashboard</h1>
-        <p className="text-base text-slate-300">Monitor project progress, milestones, and student engagement in real-time.</p>
+        <p className="text-base text-slate-300">Assign group projects, monitor task progress, and review student submissions.</p>
       </div>
 
       <div className="grid gap-6 sm:grid-cols-3">

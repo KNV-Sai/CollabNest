@@ -5,7 +5,6 @@ import { LoginPage } from '../pages/LoginPage'
 import { AdminDashboardPage } from '../pages/admin/AdminDashboardPage'
 import { StudentDashboardPage } from '../pages/student/StudentDashboardPage'
 import { ProjectDetailsPage } from '../pages/shared/ProjectDetailsPage'
-import { TasksPage } from '../pages/shared/TasksPage'
 import { MilestonesPage } from '../pages/shared/MilestonesPage'
 import { SubmissionPage } from '../pages/shared/SubmissionPage'
 import { NotFoundPage } from '../pages/NotFoundPage'
@@ -67,14 +66,6 @@ export const AppRoutes = () => {
             </AppLayout>
           }
           path="/student/project"
-        />
-        <Route
-          element={
-            <AppLayout>
-              <TasksPage />
-            </AppLayout>
-          }
-          path="/student/tasks"
         />
         <Route
           element={

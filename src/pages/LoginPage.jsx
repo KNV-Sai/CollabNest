@@ -30,7 +30,7 @@ export const LoginPage = () => {
           <img src={logo} alt="CollabNest logo" className="h-10 w-10 object-contain" />
           <div>
             <h1 className="text-base font-semibold text-slate-50">CollabNest</h1>
-            <p className="text-xs text-slate-400">Role-based student project collaboration</p>
+            <p className="text-xs text-slate-400">Group project management platform</p>
           </div>
         </div>
 

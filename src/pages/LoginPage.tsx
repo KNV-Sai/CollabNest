@@ -29,7 +29,7 @@ export const LoginPage = () => {
           <div>
             <h1 className="text-base font-semibold text-slate-50">CollabNest</h1>
             <p className="text-xs text-slate-400">
-              Role-based student project collaboration
+              Group project management platform
             </p>
           </div>
         </div>

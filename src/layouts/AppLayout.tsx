@@ -17,7 +17,6 @@ const navItemsByRole = {
   student: [
     { label: 'Dashboard', to: '/student' },
     { label: 'My Project', to: '/student/project' },
-    { label: 'Tasks', to: '/student/tasks' },
     { label: 'Milestones', to: '/student/milestones' },
     { label: 'Submission', to: '/student/submission' },
   ],
@@ -75,7 +74,7 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
         </div>
       </aside>
 
-      <div className="flex min-h-screen flex-1 flex-col">
+      <div className="flex flex-1 flex-col">
         <header className="flex items-center justify-between gap-3 border-b border-slate-800 bg-slate-950/80 px-4 py-3 backdrop-blur md:px-6">
           <div className="flex items-center gap-2 md:hidden">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-600 text-sm font-bold">
@@ -95,7 +94,7 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
         </header>
 
         <main className="flex-1 bg-gradient-to-br from-slate-950 via-slate-950 to-slate-900 px-4 py-5 md:px-6 md:py-6">
-          <div className="mx-auto max-w-6xl">{children}</div>
+          {children}
         </main>
       </div>
     </div>

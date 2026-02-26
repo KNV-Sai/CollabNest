@@ -14,7 +14,6 @@ const navItemsByRole = {
   student: [
     { label: 'Dashboard', to: '/student' },
     { label: 'My Project', to: '/student/project' },
-    { label: 'Tasks', to: '/student/tasks' },
     { label: 'Milestones', to: '/student/milestones' },
     { label: 'Submission', to: '/student/submission' },
   ],
@@ -75,7 +74,7 @@ export const AppLayout = ({ children }) => {
         </div>
       </aside>
 
-      <div className="flex min-h-screen flex-1 flex-col md:ml-64">
+      <div className="flex flex-1 flex-col">
         <header className="flex items-center justify-between gap-3 border-b border-slate-800 bg-slate-950/80 px-4 py-3 backdrop-blur md:px-6">
           <div className="flex items-center gap-2 md:hidden">
             <button
@@ -87,7 +86,7 @@ export const AppLayout = ({ children }) => {
                 <path fillRule="evenodd" d="M3 5h14a1 1 0 010 2H3a1 1 0 110-2zm0 4h14a1 1 0 010 2H3a1 1 0 110-2zm0 4h14a1 1 0 010 2H3a1 1 0 110-2z" clipRule="evenodd" />
               </svg>
             </button>
-            <div className="ml-2 flex items-center gap-2">
+            <div className="flex items-center gap-2">
               <img src={logo} alt="CollabNest logo" className="h-8 w-8 object-contain" />
               <span className="text-sm font-semibold">CollabNest</span>
             </div>
@@ -115,8 +114,8 @@ export const AppLayout = ({ children }) => {
           </div>
         </header>
 
-        <main className="flex-1 bg-gradient-to-br from-slate-950 via-slate-950 to-slate-900 px-4 py-5 md:px-0 md:py-6">
-          <div className="w-full max-w-6xl pl-4 md:pl-0">{children}</div>
+        <main className="flex-1 bg-gradient-to-br from-slate-950 via-slate-950 to-slate-900 px-4 py-5 md:px-6 md:py-6">
+          {children}
         </main>
       </div>
     </div>
