@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
+import { AuthContext } from "../context/AuthContext";
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
 import API from "../api/axios";
@@ -10,7 +11,7 @@ function Submissions() {
   const [userInfo, setUserInfo] = useState(null);
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const { user, logout, isTeacher } = useContext(AuthContext);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -30,25 +31,22 @@ function Submissions() {
   const fetchSubmissions = async () => {
     try {
       setLoading(true);
-      setError("");
-      // If endpoint doesn't exist, show empty state gracefully
+      const endpoint = isTeacher() ? "/submissions" : "/submissions/user/me";
       try {
-        const response = await API.get("/api/submissions");
+        const response = await API.get(endpoint);
         setSubmissions(response.data || []);
       } catch (err) {
-        // Endpoint might not exist yet, show empty state
         setSubmissions([]);
       }
     } catch (error) {
       console.error("Error fetching submissions:", error);
-      setError("Failed to load submissions");
     } finally {
       setLoading(false);
     }
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
+    logout();
     navigate("/");
   };
 
@@ -96,14 +94,9 @@ function Submissions() {
         <Navbar title={activeItem} onLogout={handleLogout} userInfo={userInfo} />
 
         <main className="dashboard-main">
-          {error && (
-            <div className="error-banner">
-              <p>⚠️ {error}</p>
-            </div>
-          )}
-
           <section className="dashboard-header">
             <h2>Submissions</h2>
+            {isTeacher() && <p style={{ color: "#6b7280", marginTop: "8px" }}>👨‍🏫 Review student submissions</p>}
           </section>
 
           {/* Submission Stats */}

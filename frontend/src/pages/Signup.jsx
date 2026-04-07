@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
+import { AuthContext } from "../context/AuthContext";
 import API from "../api/axios";
 import "../styles/Auth.css";
 
@@ -10,6 +11,7 @@ function Signup() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const { login } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -46,22 +48,33 @@ function Signup() {
     setLoading(true);
 
     try {
-      await API.post("/users", {
+      const res = await API.post("/auth/signup", {
         name,
         email,
         password,
       });
 
-      alert("Registration successful");
-      navigate("/");
+      const { token, id, role } = res.data;
+
+      login({
+        token,
+        id,
+        name,
+        email,
+        role,
+      });
+
+      navigate(role === "ADMIN" ? "/teacher-dashboard" : "/dashboard");
     } catch (error) {
       if (error.response) {
         const status = error.response.status;
-        const message = error.response.data?.message || "";
-        if (status === 409 || message.includes("User already exists")) {
+        const data = error.response.data;
+        const message = typeof data === 'string' ? data : (data?.message || JSON.stringify(data));
+        
+        if (status === 409 || message.includes("already exists")) {
           setErrors({ general: "User with this email already exists" });
         } else {
-          setErrors({ general: "Registration failed" });
+          setErrors({ general: message || "Registration failed" });
         }
       } else {
         setErrors({ general: "Registration failed" });

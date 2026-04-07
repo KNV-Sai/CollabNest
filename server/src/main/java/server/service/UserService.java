@@ -7,8 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import server.model.User;
 import server.model.Role;
+import server.model.User;
 import server.repository.UserRepository;
 
 @Service
@@ -34,8 +34,10 @@ public class UserService {
         // 🔐 Encode password
         user.setPassword(passwordEncoder.encode(user.getPassword()));
 
-        // ✅ FORCE ROLE = STUDENT
-        user.setRole(Role.STUDENT);
+        // ✅ If role is not specified or not ADMIN, default to STUDENT
+        if (user.getRole() == null || user.getRole() != Role.ADMIN) {
+            user.setRole(Role.STUDENT);
+        }
 
         return userRepository.save(user);
     }

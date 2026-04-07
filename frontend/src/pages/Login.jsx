@@ -1,16 +1,21 @@
-import { useState } from "react";
+import { useState, useContext } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { AuthContext } from "../context/AuthContext";
 import API from "../api/axios";
 import "../styles/Auth.css";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { login } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setError("");
+    setLoading(true);
 
     try {
       const res = await API.post("/auth/login", {
@@ -18,22 +23,32 @@ const Login = () => {
         password,
       });
 
-      console.log("LOGIN RESPONSE:", res.data);
-
-      const token = res.data.token || res.data.jwt || res.data;
+      const { token, id, name, role } = res.data;
 
       if (!token) {
-        alert("Token not received");
+        setError("Token not received from server");
         return;
       }
 
-      localStorage.setItem("token", token);
+      // Store in context and localStorage
+      login({
+        token,
+        id,
+        name,
+        email,
+        role,
+      });
 
-      alert("Login successful");
-      navigate("/dashboard");
+      // Redirect based on role
+      navigate(role === "ADMIN" ? "/teacher-dashboard" : "/dashboard");
     } catch (err) {
-      console.error(err);
-      alert("Invalid credentials ?");
+      console.error("Login error:", err);
+      const errorMsg = typeof err.response?.data === 'string' 
+        ? err.response.data 
+        : err.response?.data?.message || "Invalid email or password";
+      setError(errorMsg);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -42,6 +57,8 @@ const Login = () => {
       <div className="auth-card">
         <h2>Login to CollabNest</h2>
         <p className="auth-subtitle">Enter your credentials to continue.</p>
+
+        {error && <div className="error-message">⚠️ {error}</div>}
 
         <form onSubmit={handleLogin} className="auth-form">
           <input
@@ -62,8 +79,8 @@ const Login = () => {
             required
           />
 
-          <button type="submit" className="auth-button">
-            Login
+          <button type="submit" className="auth-button" disabled={loading}>
+            {loading ? "Logging in..." : "Login"}
           </button>
         </form>
 

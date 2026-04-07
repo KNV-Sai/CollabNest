@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
+import { AuthContext } from "../context/AuthContext";
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
 import API from "../api/axios";
@@ -10,8 +11,8 @@ function Tasks() {
   const [userInfo, setUserInfo] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [filterStatus, setFilterStatus] = useState("ALL"); // ALL, PENDING, COMPLETED
+  const { user, logout, isTeacher } = useContext(AuthContext);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -31,12 +32,12 @@ function Tasks() {
   const fetchTasks = async () => {
     try {
       setLoading(true);
-      setError("");
-      const response = await API.get("/api/tasks");
+      // Students get their own tasks, teachers see all tasks
+      const endpoint = isTeacher() ? "/tasks" : "/tasks/my-tasks";
+      const response = await API.get(endpoint);
       setTasks(response.data || []);
     } catch (error) {
       console.error("Error fetching tasks:", error);
-      setError("Failed to load tasks");
     } finally {
       setLoading(false);
     }
@@ -44,7 +45,7 @@ function Tasks() {
 
   const handleTaskStatusChange = async (taskId, newStatus) => {
     try {
-      await API.put(`/api/tasks/${taskId}`, { status: newStatus });
+      await API.put(`/tasks/${taskId}`, { status: newStatus });
       setTasks(
         tasks.map((task) =>
           task.id === taskId ? { ...task, status: newStatus } : task
@@ -52,12 +53,11 @@ function Tasks() {
       );
     } catch (error) {
       console.error("Error updating task:", error);
-      setError("Failed to update task");
     }
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
+    logout();
     navigate("/");
   };
 
@@ -120,14 +120,9 @@ function Tasks() {
         <Navbar title={activeItem} onLogout={handleLogout} userInfo={userInfo} />
 
         <main className="dashboard-main">
-          {error && (
-            <div className="error-banner">
-              <p>⚠️ {error}</p>
-            </div>
-          )}
-
           <section className="dashboard-header">
             <h2>Tasks</h2>
+            {isTeacher() && <p style={{ color: "#6b7280", marginTop: "8px" }}>👨‍🏫 All tasks in the system</p>}
           </section>
 
           {/* Task Stats */}

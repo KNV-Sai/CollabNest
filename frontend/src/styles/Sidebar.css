@@ -204,8 +204,6 @@
     left: 0;
   }
 }
-  transition: background 0.2s ease, color 0.2s ease;
-}
 
 .sidebar-item:hover {
   background: #f1f4fb;

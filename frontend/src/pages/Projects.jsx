@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
+import { AuthContext } from "../context/AuthContext";
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
 import API from "../api/axios";
@@ -10,12 +11,20 @@ function Projects() {
   const [userInfo, setUserInfo] = useState(null);
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [formData, setFormData] = useState({ name: "", description: "" });
+  const [students, setStudents] = useState([]);
+  const [selectedStudents, setSelectedStudents] = useState([]);
+  const [submitting, setSubmitting] = useState(false);
+  const { user, logout, isTeacher } = useContext(AuthContext);
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchUserInfo();
     fetchProjects();
+    if (isTeacher()) {
+      fetchStudents();
+    }
   }, []);
 
   const fetchUserInfo = async () => {
@@ -27,22 +36,58 @@ function Projects() {
     }
   };
 
+  const fetchStudents = async () => {
+    try {
+      const res = await API.get("/users");
+      const studentList = res.data.filter((u) => u.role === "STUDENT");
+      setStudents(studentList);
+    } catch (err) {
+      console.error("Error fetching students:", err);
+    }
+  };
+
   const fetchProjects = async () => {
     try {
       setLoading(true);
-      setError("");
-      const response = await API.get("/api/projects");
+      let endpoint = isTeacher() ? "/projects" : "/projects/my-projects";
+      const response = await API.get(endpoint);
       setProjects(response.data || []);
     } catch (error) {
       console.error("Error fetching projects:", error);
-      setError("Failed to load projects");
     } finally {
       setLoading(false);
     }
   };
 
+  const handleCreateProject = async (e) => {
+    e.preventDefault();
+    if (!formData.name.trim()) {
+      alert("Project name is required");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const newProject = {
+        name: formData.name,
+        description: formData.description,
+      };
+
+      const res = await API.post("/projects", newProject);
+      setProjects([...projects, res.data]);
+      setFormData({ name: "", description: "" });
+      setShowCreateForm(false);
+      alert("Project created successfully!");
+    } catch (error) {
+      console.error("Error creating project:", error);
+      alert("Failed to create project");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleLogout = () => {
-    localStorage.removeItem("token");
+    logout();
     navigate("/");
   };
 
@@ -68,25 +113,76 @@ function Projects() {
         <Navbar title={activeItem} onLogout={handleLogout} userInfo={userInfo} />
 
         <main className="dashboard-main">
-          {error && (
-            <div className="error-banner">
-              <p>⚠️ {error}</p>
-            </div>
-          )}
-
           <section className="dashboard-header">
-            <h2>Projects</h2>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
+              <h2>Projects</h2>
+              {isTeacher() && (
+                <button
+                  onClick={() => setShowCreateForm(!showCreateForm)}
+                  className="cta-button"
+                  style={{ marginBottom: 0 }}
+                >
+                  {showCreateForm ? "Cancel" : "+ Create Project"}
+                </button>
+              )}
+            </div>
           </section>
 
-          {loading ? (
-            <div className="loading-state">
-              <p>⏳ Loading projects...</p>
-            </div>
-          ) : projects.length === 0 ? (
+          {showCreateForm && (
+            <section style={{ background: "#f9fafb", padding: "24px", borderRadius: "8px", marginBottom: "24px" }}>
+              <h3 style={{ marginBottom: "16px" }}>Create New Project</h3>
+              <form onSubmit={handleCreateProject}>
+                <input
+                  type="text"
+                  placeholder="Project Name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  style={{
+                    width: "100%",
+                    padding: "12px",
+                    marginBottom: "12px",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: "6px",
+                    fontSize: "1rem",
+                  }}
+                  required
+                />
+                <textarea
+                  placeholder="Project Description"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  style={{
+                    width: "100%",
+                    padding: "12px",
+                    marginBottom: "12px",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: "6px",
+                    fontSize: "1rem",
+                    minHeight: "100px",
+                    fontFamily: "inherit",
+                  }}
+                />
+                <button type="submit" className="auth-button" disabled={submitting}>
+                  {submitting ? "Creating..." : "Create Project"}
+                </button>
+              </form>
+            </section>
+          )}
+
+          {projects.length === 0 ? (
             <section className="empty-state">
               <div className="empty-icon">📁</div>
-              <h3>No Projects</h3>
-              <p>You haven't been assigned to any projects yet. Check back later!</p>
+              <h3>{isTeacher() ? "No Projects Yet" : "No Assigned Projects"}</h3>
+              <p>
+                {isTeacher()
+                  ? "Create your first project to get started!"
+                  : "You haven't been assigned to any projects yet."}
+              </p>
+              {isTeacher() && (
+                <button className="cta-button" onClick={() => setShowCreateForm(true)}>
+                  Create Your First Project
+                </button>
+              )}
             </section>
           ) : (
             <section className="projects-section">
@@ -96,7 +192,8 @@ function Projects() {
                   const completedTasks = project.tasks
                     ? project.tasks.filter((t) => t.status === "COMPLETED").length
                     : 0;
-                  const completionPercentage = totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);
+                  const completionPercentage =
+                    totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);
 
                   return (
                     <div key={project.id} className="project-card">

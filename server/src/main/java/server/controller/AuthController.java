@@ -36,9 +36,20 @@ public class AuthController {
             User user = userOpt.get();
             if (passwordEncoder.matches(request.getPassword(), user.getPassword())) {
                 String token = jwtUtil.generateToken(user.getEmail());
-                return ResponseEntity.ok(new LoginResponse(token));
+                return ResponseEntity.ok(new LoginResponse(token, user.getId(), user.getName(), user.getEmail(), user.getRole().toString()));
             }
         }
         return ResponseEntity.status(401).body("Invalid credentials");
+    }
+
+    @PostMapping("/signup")
+    public ResponseEntity<?> signup(@RequestBody User user) {
+        try {
+            User created = userService.create(user);
+            String token = jwtUtil.generateToken(created.getEmail());
+            return ResponseEntity.status(201).body(new LoginResponse(token, created.getId(), created.getName(), created.getEmail(), created.getRole().toString()));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(409).body("Email already exists");
+        }
     }
 }

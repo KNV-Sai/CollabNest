@@ -32,8 +32,13 @@ public class SecurityConfig {
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
             .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/api/auth/**", "/api/users/**").permitAll()
+            .requestMatchers("/api/auth/**").permitAll()
+            .requestMatchers("/api/users").permitAll() // Allow signup
+            .requestMatchers("/api/users/me").authenticated()
+            .requestMatchers("/api/users/**").authenticated()
             .requestMatchers("/api/projects/**").authenticated()
+            .requestMatchers("/api/tasks/**").authenticated()
+            .requestMatchers("/api/submissions/**").authenticated()
             .anyRequest().permitAll()
         )
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);

@@ -1,4 +1,4 @@
-import { useEffect, useState, useContext } from "react";
+import { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import Navbar from "../components/Navbar";
@@ -6,14 +6,14 @@ import Sidebar from "../components/Sidebar";
 import API from "../api/axios";
 import "../styles/Dashboard.css";
 
-function Dashboard() {
+function TeacherDashboard() {
   const [activeItem, setActiveItem] = useState("Dashboard");
   const [userInfo, setUserInfo] = useState(null);
   const [stats, setStats] = useState({
     totalProjects: 0,
-    tasksAssigned: 0,
-    completedTasks: 0,
-    ongoingTasks: 0,
+    totalStudents: 0,
+    pendingSubmissions: 0,
+    totalTasks: 0,
   });
   const [recentProjects, setRecentProjects] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -23,9 +23,14 @@ function Dashboard() {
   useEffect(() => {
     // Wait for AuthProvider to finish loading
     if (!authLoading) {
+      if (!user || user.role !== "ADMIN") {
+        navigate("/dashboard");
+        return;
+      }
       fetchDashboardData();
+      setActiveItem("Dashboard");
     }
-  }, [authLoading]);
+  }, [user, authLoading, navigate]);
 
   const fetchDashboardData = async () => {
     try {
@@ -35,28 +40,32 @@ function Dashboard() {
       const userRes = await API.get("/users/me");
       setUserInfo(userRes.data);
 
-      // Fetch projects - filtered by user
-      const projectsRes = await API.get("/projects/my-projects");
+      // Fetch all projects (teacher's projects)
+      const projectsRes = await API.get("/projects");
       const projects = projectsRes.data || [];
 
-      // Calculate stats
-      let totalTasks = 0;
-      let completedTasks = 0;
+      // Fetch all users (students)
+      const usersRes = await API.get("/users");
+      const students = usersRes.data.filter((u) => u.role === "STUDENT") || [];
 
+      // Fetch all submissions
+      const submissionsRes = await API.get("/submissions");
+      const submissions = submissionsRes.data || [];
+      const pending = submissions.filter((s) => s.status === "SUBMITTED").length;
+
+      // Calculate total tasks
+      let totalTasks = 0;
       projects.forEach((project) => {
         if (project.tasks) {
           totalTasks += project.tasks.length;
-          completedTasks += project.tasks.filter(
-            (task) => task.status === "COMPLETED"
-          ).length;
         }
       });
 
       setStats({
         totalProjects: projects.length,
-        tasksAssigned: totalTasks,
-        completedTasks: completedTasks,
-        ongoingTasks: totalTasks - completedTasks,
+        totalStudents: students.length,
+        pendingSubmissions: pending,
+        totalTasks,
       });
 
       setRecentProjects(projects.slice(0, 3));
@@ -70,11 +79,6 @@ function Dashboard() {
   const handleLogout = () => {
     logout();
     navigate("/");
-  };
-
-  const getCompletionPercentage = () => {
-    if (stats.tasksAssigned === 0) return 0;
-    return Math.round((stats.completedTasks / stats.tasksAssigned) * 100);
   };
 
   if (authLoading || loading) {
@@ -96,56 +100,50 @@ function Dashboard() {
       <Sidebar activeItem={activeItem} onSelect={setActiveItem} userInfo={userInfo} />
 
       <div className="dashboard-container">
-        <Navbar title={activeItem} onLogout={handleLogout} userInfo={userInfo} />
+        <Navbar title={`${activeItem} - Teacher Panel`} onLogout={handleLogout} userInfo={userInfo} />
 
         <main className="dashboard-main">
           <section className="dashboard-header">
-            <h2>Dashboard</h2>
+            <h2>Teacher Dashboard</h2>
+            <p style={{ color: "#6b7280", marginTop: "8px" }}>👨‍🏫 Manage projects, tasks, and review submissions</p>
           </section>
 
           <section className="summary-cards">
             <article className="summary-card">
               <div className="card-header">
                 <span className="card-icon">📁</span>
-                <p className="card-label">Active Projects</p>
+                <p className="card-label">Projects Created</p>
               </div>
               <p className="card-value">{stats.totalProjects}</p>
-              {stats.totalProjects > 0 && (
-                <p className="card-meta">{stats.totalProjects} project{stats.totalProjects !== 1 ? "s" : ""} in progress</p>
+            </article>
+
+            <article className="summary-card">
+              <div className="card-header">
+                <span className="card-icon">👥</span>
+                <p className="card-label">Students</p>
+              </div>
+              <p className="card-value">{stats.totalStudents}</p>
+            </article>
+
+            <article className="summary-card">
+              <div className="card-header">
+                <span className="card-icon">⏳</span>
+                <p className="card-label">Pending Reviews</p>
+              </div>
+              <p className="card-value">{stats.pendingSubmissions}</p>
+              {stats.pendingSubmissions > 0 && (
+                <p className="card-meta" style={{ color: "#ef4444" }}>
+                  {stats.pendingSubmissions} awaiting feedback
+                </p>
               )}
             </article>
 
             <article className="summary-card">
               <div className="card-header">
                 <span className="card-icon">✅</span>
-                <p className="card-label">Completed Tasks</p>
-              </div>
-              <p className="card-value">{stats.completedTasks}</p>
-              {stats.tasksAssigned > 0 && (
-                <p className="card-meta">{getCompletionPercentage()}% completion</p>
-              )}
-            </article>
-
-            <article className="summary-card">
-              <div className="card-header">
-                <span className="card-icon">⏳</span>
-                <p className="card-label">In Progress</p>
-              </div>
-              <p className="card-value">{stats.ongoingTasks}</p>
-              {stats.ongoingTasks > 0 && (
-                <p className="card-meta">{stats.ongoingTasks} task{stats.ongoingTasks !== 1 ? "s" : ""} remaining</p>
-              )}
-            </article>
-
-            <article className="summary-card">
-              <div className="card-header">
-                <span className="card-icon">🎯</span>
                 <p className="card-label">Total Tasks</p>
               </div>
-              <p className="card-value">{stats.tasksAssigned}</p>
-              {stats.tasksAssigned > 0 && (
-                <p className="card-meta">across all projects</p>
-              )}
+              <p className="card-value">{stats.totalTasks}</p>
             </article>
           </section>
 
@@ -157,7 +155,7 @@ function Dashboard() {
                   className="view-all-link"
                   onClick={() => navigate("/projects")}
                 >
-                  View All →
+                  Manage All →
                 </button>
               </div>
 
@@ -166,14 +164,13 @@ function Dashboard() {
                   <div key={project.id} className="recent-card">
                     <div className="card-top">
                       <h4>{project.name}</h4>
-                      <span className="status-badge">Active</span>
                     </div>
                     <p className="card-description">
-                      {project.description || "No description provided"}
+                      {project.description || "No description"}
                     </p>
                     <div className="card-stats">
                       <span>📋 {project.tasks ? project.tasks.length : 0} tasks</span>
-                      <span>✅ {project.tasks ? project.tasks.filter(t => t.status === "COMPLETED").length : 0} done</span>
+                      <span>👥 {project.users ? project.users.length : 0} students</span>
                     </div>
                   </div>
                 ))}
@@ -185,11 +182,12 @@ function Dashboard() {
             <section className="empty-state">
               <div className="empty-icon">📋</div>
               <h3>No Projects Yet</h3>
+              <p>Start managing your student projects and assignments.</p>
               <button
                 className="cta-button"
                 onClick={() => navigate("/projects")}
               >
-                View Projects
+                Create Your First Project
               </button>
             </section>
           )}
@@ -199,4 +197,4 @@ function Dashboard() {
   );
 }
 
-export default Dashboard;
+export default TeacherDashboard;
