@@ -1,15 +1,22 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "../styles/Sidebar.css";
 
 const navItems = [
-  { name: "Dashboard", icon: "🏠" },
-  { name: "Projects", icon: "📁" },
-  { name: "Tasks", icon: "✅" },
-  { name: "Submissions", icon: "📤" },
+  { name: "Dashboard", icon: "🏠", path: "/dashboard" },
+  { name: "Projects", icon: "📁", path: "/projects" },
+  { name: "Tasks", icon: "✅", path: "/tasks" },
+  { name: "Submissions", icon: "📤", path: "/submissions" },
 ];
 
 function Sidebar({ activeItem, onSelect, userInfo }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const navigate = useNavigate();
+
+  const handleNavigation = (item) => {
+    onSelect(item.name);
+    navigate(item.path);
+  };
 
   return (
     <aside className={`sidebar ${isCollapsed ? "collapsed" : ""}`}>
@@ -37,7 +44,7 @@ function Sidebar({ activeItem, onSelect, userInfo }) {
           <button
             key={item.name}
             className={`sidebar-item ${activeItem === item.name ? "active" : ""}`}
-            onClick={() => onSelect(item.name)}
+            onClick={() => handleNavigation(item)}
             title={item.name}
           >
             <span className="item-icon">{item.icon}</span>

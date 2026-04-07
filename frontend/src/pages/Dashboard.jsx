@@ -159,7 +159,7 @@ function Dashboard() {
                 <h3>Recent Projects</h3>
                 <button
                   className="view-all-link"
-                  onClick={() => setActiveItem("Projects")}
+                  onClick={() => navigate("/projects")}
                 >
                   View All →
                 </button>
@@ -189,12 +189,11 @@ function Dashboard() {
             <section className="empty-state">
               <div className="empty-icon">📋</div>
               <h3>No Projects Yet</h3>
-              <p>Start by creating your first project or joining an existing one.</p>
               <button
                 className="cta-button"
-                onClick={() => setActiveItem("Projects")}
+                onClick={() => navigate("/projects")}
               >
-                Create Your First Project
+                View Projects
               </button>
             </section>
           )}
