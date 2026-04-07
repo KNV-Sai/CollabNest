@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
 import API from "../api/axios";
-import "../styles/Dashboard.css";
+import "../styles/Dashboard.css"; // Reuse Dashboard styles
 
 function Projects() {
   const [activeItem, setActiveItem] = useState("Projects");
@@ -160,5 +160,4 @@ function Projects() {
   );
 }
 
-export default Projects;</content>
-<parameter name="filePath">c:\Users\knvsa\Desktop\CollabNest\frontend\src\pages\Projects.jsx
+export default Projects;
