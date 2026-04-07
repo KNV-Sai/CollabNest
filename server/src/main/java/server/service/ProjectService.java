@@ -60,4 +60,20 @@ public class ProjectService {
             })
             .orElse(false);
     }
+
+    public void assignStudent(Long projectId, Long studentId) {
+        Optional<Project> projectOpt = projectRepository.findById(projectId);
+        Optional<User> studentOpt = userRepository.findById(studentId);
+
+        if (projectOpt.isPresent() && studentOpt.isPresent()) {
+            Project project = projectOpt.get();
+            User student = studentOpt.get();
+
+            // Add student to project if not already present
+            if (!project.getUsers().contains(student)) {
+                project.getUsers().add(student);
+                projectRepository.save(project);
+            }
+        }
+    }
 }

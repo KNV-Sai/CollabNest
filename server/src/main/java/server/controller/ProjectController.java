@@ -1,6 +1,7 @@
 package server.controller;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -67,6 +68,39 @@ public class ProjectController {
         return projectService.update(id, project)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/{projectId}/assign-student")
+    public ResponseEntity<?> assignStudent(@PathVariable Long projectId, @RequestBody Map<String, Long> body) {
+        try {
+            Long studentId = body.get("studentId");
+            if (studentId == null) {
+                return ResponseEntity.badRequest().build();
+            }
+
+            // Get the project
+            Project project = projectService.getById(projectId).orElse(null);
+            if (project == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            // Get the student
+            User student = userService.getById(studentId).orElse(null);
+            if (student == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            // Check if student is already assigned
+            if (project.getUsers() != null && project.getUsers().contains(student)) {
+                return ResponseEntity.badRequest().build();
+            }
+
+            // Assign the student
+            projectService.assignStudent(projectId, studentId);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
     @DeleteMapping("/{id}")
