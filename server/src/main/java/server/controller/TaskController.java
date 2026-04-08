@@ -2,6 +2,7 @@ package server.controller;
 
 import java.util.List;
 import java.util.Map;
+import java.time.LocalDate;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -43,6 +44,50 @@ public class TaskController {
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
+    @PostMapping("/my")
+    public ResponseEntity<?> createMyTask(@RequestBody Map<String, String> body, Authentication authentication) {
+        User user = getCurrentUser(authentication);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
+        }
+        if (user.getRole() != Role.STUDENT) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only students can create personal project tasks");
+        }
+
+        String projectIdRaw = body.get("projectId");
+        String name = body.get("name");
+        String description = body.get("description");
+        String dueDateRaw = body.get("dueDate");
+
+        if (projectIdRaw == null || projectIdRaw.isBlank()) {
+            return ResponseEntity.badRequest().body("Project is required");
+        }
+        if (name == null || name.isBlank()) {
+            return ResponseEntity.badRequest().body("Task name is required");
+        }
+
+        Long projectId;
+        try {
+            projectId = Long.parseLong(projectIdRaw);
+        } catch (NumberFormatException ex) {
+            return ResponseEntity.badRequest().body("Invalid project id");
+        }
+
+        LocalDate dueDate = null;
+        if (dueDateRaw != null && !dueDateRaw.isBlank()) {
+            try {
+                dueDate = LocalDate.parse(dueDateRaw);
+            } catch (Exception ex) {
+                return ResponseEntity.badRequest().body("Invalid due date format");
+            }
+        }
+
+        return taskService.createForStudent(user, projectId, name.trim(), description, dueDate)
+            .<ResponseEntity<?>>map(created -> ResponseEntity.status(HttpStatus.CREATED).body(created))
+            .orElse(ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body("You can only add tasks to projects you are assigned to"));
+    }
+
     @GetMapping
     public ResponseEntity<List<Task>> getAll(Authentication authentication) {
         if (!isAdmin(authentication)) {
@@ -67,7 +112,14 @@ public class TaskController {
 
     // Get all tasks for a specific project
     @GetMapping("/project/{projectId}")
-    public ResponseEntity<List<Task>> getByProject(@PathVariable Long projectId) {
+    public ResponseEntity<List<Task>> getByProject(@PathVariable Long projectId, Authentication authentication) {
+        User user = getCurrentUser(authentication);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        if (user.getRole() == Role.STUDENT && !taskService.isUserAssignedToProject(user.getId(), projectId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         return ResponseEntity.ok(taskService.getTasksByProject(projectId));
     }
 
@@ -79,7 +131,14 @@ public class TaskController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Task> update(@PathVariable Long id, @RequestBody Task task) {
+    public ResponseEntity<Task> update(@PathVariable Long id, @RequestBody Task task, Authentication authentication) {
+        User user = getCurrentUser(authentication);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        if (user.getRole() == Role.STUDENT && !taskService.isTaskAssignedToUser(id, user.getId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         return taskService.update(id, task)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -87,7 +146,14 @@ public class TaskController {
 
     // Convenience PATCH endpoint for status-only updates from student UI
     @PutMapping("/{id}/status")
-    public ResponseEntity<Task> updateStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
+    public ResponseEntity<Task> updateStatus(@PathVariable Long id, @RequestBody Map<String, String> body, Authentication authentication) {
+        User user = getCurrentUser(authentication);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        if (user.getRole() == Role.STUDENT && !taskService.isTaskAssignedToUser(id, user.getId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         String statusStr = body.get("status");
         if (statusStr == null) {
             return ResponseEntity.badRequest().build();
@@ -102,6 +168,13 @@ public class TaskController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().build();
         }
+    }
+
+    private User getCurrentUser(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return null;
+        }
+        return userService.getByEmail(authentication.getName()).orElse(null);
     }
 
     @DeleteMapping("/{id}")

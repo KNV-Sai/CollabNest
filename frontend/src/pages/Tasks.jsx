@@ -10,8 +10,18 @@ function Tasks() {
   const [activeItem, setActiveItem] = useState("Tasks");
   const [userInfo, setUserInfo] = useState(null);
   const [tasks, setTasks] = useState([]);
+  const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState("ALL"); // ALL, PENDING, COMPLETED
+  const [actionMessage, setActionMessage] = useState("");
+  const [actionType, setActionType] = useState("info");
+  const [creatingTask, setCreatingTask] = useState(false);
+  const [taskForm, setTaskForm] = useState({
+    projectId: "",
+    name: "",
+    description: "",
+    dueDate: "",
+  });
   const { logout, isTeacher } = useContext(AuthContext);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -20,6 +30,7 @@ function Tasks() {
   useEffect(() => {
     fetchUserInfo();
     fetchTasks();
+    fetchProjects();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
@@ -29,6 +40,17 @@ function Tasks() {
       setUserInfo(res.data);
     } catch (err) {
       console.error("Error fetching user info:", err);
+    }
+  };
+
+  const fetchProjects = async () => {
+    try {
+      const endpoint = isTeacher() ? "/projects" : "/projects/my-projects";
+      const response = await API.get(endpoint);
+      setProjects(response.data || []);
+    } catch (error) {
+      console.error("Error fetching projects:", error);
+      setProjects([]);
     }
   };
 
@@ -59,14 +81,55 @@ function Tasks() {
 
   const handleTaskStatusChange = async (taskId, newStatus) => {
     try {
+      setActionMessage("");
       await API.put(`/tasks/${taskId}`, { status: newStatus });
       setTasks(
         tasks.map((task) =>
           task.id === taskId ? { ...task, status: newStatus } : task
         )
       );
+      setActionMessage("Task status updated.");
+      setActionType("success");
     } catch (error) {
       console.error("Error updating task:", error);
+      setActionMessage("Could not update task status.");
+      setActionType("error");
+    }
+  };
+
+  const handleCreateTask = async (e) => {
+    e.preventDefault();
+    setActionMessage("");
+
+    const selectedProjectId = projectId || taskForm.projectId;
+    if (!selectedProjectId || !taskForm.name.trim()) {
+      setActionMessage("Project and task name are required.");
+      setActionType("error");
+      return;
+    }
+
+    try {
+      setCreatingTask(true);
+      await API.post("/tasks/my", {
+        projectId: String(selectedProjectId),
+        name: taskForm.name.trim(),
+        description: taskForm.description.trim(),
+        dueDate: taskForm.dueDate || null,
+      });
+      setTaskForm((prev) => ({ ...prev, name: "", description: "", dueDate: "" }));
+      setActionMessage("Task added successfully.");
+      setActionType("success");
+      await fetchTasks();
+      await fetchProjects();
+    } catch (error) {
+      const message =
+        typeof error.response?.data === "string"
+          ? error.response.data
+          : "Could not create task.";
+      setActionMessage(message);
+      setActionType("error");
+    } finally {
+      setCreatingTask(false);
     }
   };
 
@@ -88,6 +151,13 @@ function Tasks() {
     completed: tasks.filter((t) => t.status === "COMPLETED").length,
     pending: tasks.filter((t) => t.status !== "COMPLETED").length,
   };
+  const projectProgress = (projects || []).map((project) => {
+    const projectTasks = Array.isArray(project.tasks) ? project.tasks : [];
+    const total = projectTasks.length;
+    const completed = projectTasks.filter((task) => task.status === "COMPLETED").length;
+    const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+    return { id: project.id, name: project.name, total, completed, percent };
+  });
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -147,6 +217,97 @@ function Tasks() {
               isTeacher() && <p style={{ color: "#6b7280", marginTop: "8px" }}>👨‍🏫 All tasks in the system</p>
             )}
           </section>
+
+          {actionMessage && (
+            <section className={`message-banner ${actionType === "error" ? "error" : "success"}`}>
+              <p>{actionMessage}</p>
+            </section>
+          )}
+
+          {!isTeacher() && (
+            <section className="form-section" style={{ marginBottom: "24px" }}>
+              <h3>Add Task To Your Project</h3>
+              <form className="project-form" onSubmit={handleCreateTask}>
+                <div className="form-group">
+                  <label htmlFor="taskProject">Project</label>
+                  <select
+                    id="taskProject"
+                    className="form-input"
+                    value={projectId || taskForm.projectId}
+                    onChange={(e) => setTaskForm({ ...taskForm, projectId: e.target.value })}
+                    disabled={Boolean(projectId)}
+                    required
+                  >
+                    <option value="">Select project</option>
+                    {projects.map((project) => (
+                      <option key={project.id} value={project.id}>
+                        {project.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="taskName">Task name</label>
+                  <input
+                    id="taskName"
+                    className="form-input"
+                    type="text"
+                    value={taskForm.name}
+                    onChange={(e) => setTaskForm({ ...taskForm, name: e.target.value })}
+                    placeholder="Ex: Build login page"
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="taskDescription">Description</label>
+                  <textarea
+                    id="taskDescription"
+                    className="form-input"
+                    value={taskForm.description}
+                    onChange={(e) => setTaskForm({ ...taskForm, description: e.target.value })}
+                    placeholder="Add details for this task"
+                    style={{ minHeight: "88px" }}
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="taskDueDate">Due date</label>
+                  <input
+                    id="taskDueDate"
+                    className="form-input"
+                    type="date"
+                    value={taskForm.dueDate}
+                    onChange={(e) => setTaskForm({ ...taskForm, dueDate: e.target.value })}
+                  />
+                </div>
+                <button className="submit-btn" type="submit" disabled={creatingTask}>
+                  {creatingTask ? "Adding..." : "Add Task"}
+                </button>
+              </form>
+            </section>
+          )}
+
+          {isTeacher() && !projectId && (
+            <section className="projects-section">
+              <h3>Project Progress</h3>
+              <div className="projects-grid">
+                {projectProgress.map((project) => (
+                  <article key={project.id} className="project-card">
+                    <div className="project-header">
+                      <h4>{project.name}</h4>
+                      <span className="project-status">{project.percent}% done</span>
+                    </div>
+                    <p className="project-description">
+                      {project.completed} of {project.total} tasks completed
+                    </p>
+                    <div className="progress-bar">
+                      <div className="progress-fill" style={{ width: `${project.percent}%` }} />
+                    </div>
+                    <p className="progress-text">Track this project from Projects page for full details.</p>
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* Task Stats */}
           <section className="summary-cards">
@@ -243,6 +404,9 @@ function Tasks() {
                         )}
                         {task.projectName && (
                           <p className="task-project">📁 {task.projectName}</p>
+                        )}
+                        {!task.projectName && task.project?.name && (
+                          <p className="task-project">📁 {task.project.name}</p>
                         )}
                       </div>
                     </div>

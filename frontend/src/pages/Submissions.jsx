@@ -172,6 +172,11 @@ function Submissions() {
     rejected: submissions.filter((s) => s.status?.toLowerCase() === "rejected").length,
   };
 
+  const gradedSubmissions = submissions.filter((s) => typeof s.grade === "number");
+  const averageGrade = gradedSubmissions.length
+    ? (gradedSubmissions.reduce((sum, s) => sum + s.grade, 0) / gradedSubmissions.length).toFixed(1)
+    : null;
+
   return (
     <div className="dashboard-wrapper">
       <Sidebar activeItem={activeItem} onSelect={setActiveItem} userInfo={userInfo} />
@@ -182,40 +187,28 @@ function Submissions() {
         <main className="dashboard-main">
           <section className="dashboard-header">
             <h2>Submissions</h2>
-            {isTeacher() && <p style={{ color: "#6b7280", marginTop: "8px" }}>👨‍🏫 Review student submissions</p>}
+            {isTeacher() && <p className="dashboard-intro">Review, grade, and guide student project submissions.</p>}
+            {!isTeacher() && <p className="dashboard-intro">Submit milestones and track feedback from your teacher.</p>}
           </section>
 
           {actionMessage && (
-            <section
-              style={{
-                marginBottom: "16px",
-                padding: "10px 12px",
-                borderRadius: "8px",
-                color: actionType === "error" ? "#b91c1c" : "#166534",
-                background: actionType === "error" ? "#fee2e2" : "#dcfce7",
-              }}
-            >
-              {actionMessage}
+            <section className={`message-banner ${actionType === "error" ? "error" : "success"}`}>
+              <p>{actionMessage}</p>
             </section>
           )}
 
           {!isTeacher() && (
-            <section
-              style={{
-                background: "#ffffff",
-                border: "1px solid #e5e7eb",
-                borderRadius: "10px",
-                padding: "16px",
-                marginBottom: "20px",
-              }}
-            >
-              <h3 style={{ marginBottom: "12px" }}>Submit Project Work</h3>
-              <form onSubmit={handleCreateSubmission}>
+            <section className="form-section" style={{ marginBottom: "24px" }}>
+              <h3>Submit Project Work</h3>
+              <form className="project-form" onSubmit={handleCreateSubmission}>
+                <div className="form-group">
+                  <label htmlFor="submissionProject">Project</label>
                 <select
+                  id="submissionProject"
+                  className="form-input"
                   value={submitForm.projectId}
                   onChange={(e) => setSubmitForm({ ...submitForm, projectId: e.target.value })}
                   required
-                  style={{ width: "100%", padding: "10px", marginBottom: "10px", borderRadius: "6px", border: "1px solid #d1d5db" }}
                 >
                   <option value="">Select Project</option>
                   {projects.map((p) => (
@@ -224,28 +217,42 @@ function Submissions() {
                     </option>
                   ))}
                 </select>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="submissionTitle">Title</label>
                 <input
+                  id="submissionTitle"
+                  className="form-input"
                   type="text"
                   placeholder="Submission title"
                   value={submitForm.title}
                   onChange={(e) => setSubmitForm({ ...submitForm, title: e.target.value })}
-                  style={{ width: "100%", padding: "10px", marginBottom: "10px", borderRadius: "6px", border: "1px solid #d1d5db" }}
                   required
                 />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="submissionDescription">Description</label>
                 <textarea
+                  id="submissionDescription"
+                  className="form-input"
                   placeholder="What did your team complete?"
                   value={submitForm.description}
                   onChange={(e) => setSubmitForm({ ...submitForm, description: e.target.value })}
-                  style={{ width: "100%", padding: "10px", marginBottom: "10px", borderRadius: "6px", border: "1px solid #d1d5db", minHeight: "90px" }}
+                  style={{ minHeight: "90px" }}
                 />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="submissionUrl">Submission URL</label>
                 <input
+                  id="submissionUrl"
+                  className="form-input"
                   type="url"
                   placeholder="Submission link (Drive/GitHub/etc)"
                   value={submitForm.submissionUrl}
                   onChange={(e) => setSubmitForm({ ...submitForm, submissionUrl: e.target.value })}
-                  style={{ width: "100%", padding: "10px", marginBottom: "10px", borderRadius: "6px", border: "1px solid #d1d5db" }}
                 />
-                <button type="submit" className="cta-button">Submit Work</button>
+                </div>
+                <button type="submit" className="submit-btn">Submit Work</button>
               </form>
             </section>
           )}
@@ -283,6 +290,14 @@ function Submissions() {
               </div>
               <p className="card-value">{stats.rejected}</p>
             </article>
+
+            <article className="summary-card">
+              <div className="card-header">
+                <span className="card-icon">📈</span>
+                <p className="card-label">Average Grade</p>
+              </div>
+              <p className="card-value">{averageGrade ? `${averageGrade}%` : "-"}</p>
+            </article>
           </section>
 
           {error ? (
@@ -303,7 +318,7 @@ function Submissions() {
                 {submissions.map((submission) => {
                   const badgeInfo = getStatusBadge(submission.status);
                   return (
-                    <div key={submission.id} className="submission-card">
+                    <div key={submission.id} className="submission-card" style={{ border: "1px solid #e5e9f2", borderRadius: "16px", padding: "20px", background: "#fff", boxShadow: "0 10px 30px rgba(15, 23, 42, 0.06)", marginBottom: "16px" }}>
                       <div className="submission-header">
                         <div>
                           <h4>{submission.project?.name || submission.projectName || "Project"}</h4>
@@ -368,25 +383,27 @@ function Submissions() {
                       </div>
 
                       {isTeacher() && (
-                        <div style={{ marginTop: "14px", borderTop: "1px solid #e5e7eb", paddingTop: "12px" }}>
+                        <div className="form-section" style={{ marginTop: "14px", marginBottom: 0, padding: "16px", borderRadius: "12px" }}>
                           <p style={{ marginBottom: "8px", fontWeight: 600 }}>Review & Grade</p>
-                          <div style={{ display: "grid", gap: "8px" }}>
+                          <div className="project-form" style={{ gap: "12px" }}>
                             <select
+                              className="form-input"
                               value={getReviewForm(submission).status}
                               onChange={(e) => updateReviewForm(submission.id, "status", e.target.value)}
-                              style={{ padding: "8px", borderRadius: "6px", border: "1px solid #d1d5db" }}
                             >
                               <option value="PENDING">Pending</option>
                               <option value="APPROVED">Approved</option>
                               <option value="REJECTED">Rejected</option>
                             </select>
                             <textarea
+                              className="form-input"
                               value={getReviewForm(submission).feedback}
                               onChange={(e) => updateReviewForm(submission.id, "feedback", e.target.value)}
                               placeholder="Feedback for student"
-                              style={{ padding: "8px", borderRadius: "6px", border: "1px solid #d1d5db", minHeight: "70px" }}
+                              style={{ minHeight: "80px" }}
                             />
                             <input
+                              className="form-input"
                               type="number"
                               min="0"
                               max="100"
@@ -394,10 +411,9 @@ function Submissions() {
                               value={getReviewForm(submission).grade}
                               onChange={(e) => updateReviewForm(submission.id, "grade", e.target.value)}
                               placeholder="Grade (0-100)"
-                              style={{ padding: "8px", borderRadius: "6px", border: "1px solid #d1d5db" }}
                             />
                             <button
-                              className="cta-button"
+                              className="submit-btn"
                               onClick={() => handleReviewSubmission(submission.id)}
                             >
                               Save Review

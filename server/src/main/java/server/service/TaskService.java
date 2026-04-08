@@ -2,11 +2,13 @@ package server.service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import server.model.Project;
+import server.model.Role;
 import server.model.Task;
 import server.model.TaskStatus;
 import server.model.User;
@@ -33,6 +35,36 @@ public class TaskService {
             task.setStatus(TaskStatus.TODO);
         }
         return taskRepository.save(task);
+    }
+
+    public Optional<Task> createForStudent(User student, Long projectId, String name, String description, java.time.LocalDate dueDate) {
+        if (student == null || student.getRole() != Role.STUDENT) {
+            return Optional.empty();
+        }
+
+        Optional<Project> projectOpt = projectRepository.findById(projectId);
+        if (projectOpt.isEmpty()) {
+            return Optional.empty();
+        }
+
+        Project project = projectOpt.get();
+        Set<User> projectUsers = project.getUsers();
+        boolean assignedToProject = projectUsers != null
+            && projectUsers.stream().anyMatch(u -> u.getId() != null && u.getId().equals(student.getId()));
+        if (!assignedToProject) {
+            return Optional.empty();
+        }
+
+        Task task = Task.builder()
+            .name(name)
+            .description(description)
+            .dueDate(dueDate)
+            .status(TaskStatus.TODO)
+            .project(project)
+            .assignee(student)
+            .build();
+
+        return Optional.of(taskRepository.save(task));
     }
 
     public List<Task> getAll() {
@@ -82,6 +114,27 @@ public class TaskService {
                 }
                 return taskRepository.save(existing);
             });
+    }
+
+    public boolean isTaskAssignedToUser(Long taskId, Long userId) {
+        if (taskId == null || userId == null) {
+            return false;
+        }
+        return taskRepository.findById(taskId)
+            .map(task -> task.getAssignee() != null
+                && task.getAssignee().getId() != null
+                && task.getAssignee().getId().equals(userId))
+            .orElse(false);
+    }
+
+    public boolean isUserAssignedToProject(Long userId, Long projectId) {
+        if (userId == null || projectId == null) {
+            return false;
+        }
+        return projectRepository.findById(projectId)
+            .map(project -> project.getUsers() != null
+                && project.getUsers().stream().anyMatch(user -> user.getId() != null && user.getId().equals(userId)))
+            .orElse(false);
     }
 
     public boolean delete(Long id) {

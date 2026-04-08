@@ -128,6 +128,23 @@ function Projects() {
   const getProjectUsers = (project) => (Array.isArray(project?.users) ? project.users : []);
   const getProjectTasks = (project) => (Array.isArray(project?.tasks) ? project.tasks : []);
   const safeProjects = Array.isArray(projects) ? projects : [];
+  const projectProgressStats = safeProjects.map((project) => {
+    const taskList = getProjectTasks(project);
+    const totalTasks = taskList.length;
+    const completedTasks = taskList.filter((t) => t.status === "COMPLETED").length;
+    const completionPercentage = totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);
+    return {
+      id: project.id,
+      totalTasks,
+      completedTasks,
+      completionPercentage,
+    };
+  });
+  const totalTasksAcrossProjects = projectProgressStats.reduce((sum, p) => sum + p.totalTasks, 0);
+  const completedTasksAcrossProjects = projectProgressStats.reduce((sum, p) => sum + p.completedTasks, 0);
+  const averageCompletion = projectProgressStats.length
+    ? Math.round(projectProgressStats.reduce((sum, p) => sum + p.completionPercentage, 0) / projectProgressStats.length)
+    : 0;
 
   const handleAssignStudentByEmail = async (e) => {
     e.preventDefault();
@@ -198,6 +215,39 @@ function Projects() {
               )}
             </div>
           </section>
+
+          {isTeacher() && safeProjects.length > 0 && (
+            <section className="summary-cards">
+              <article className="summary-card">
+                <div className="card-header">
+                  <span className="card-icon">📁</span>
+                  <p className="card-label">Projects</p>
+                </div>
+                <p className="card-value">{safeProjects.length}</p>
+              </article>
+              <article className="summary-card">
+                <div className="card-header">
+                  <span className="card-icon">📋</span>
+                  <p className="card-label">Total Tasks</p>
+                </div>
+                <p className="card-value">{totalTasksAcrossProjects}</p>
+              </article>
+              <article className="summary-card">
+                <div className="card-header">
+                  <span className="card-icon">✅</span>
+                  <p className="card-label">Completed Tasks</p>
+                </div>
+                <p className="card-value">{completedTasksAcrossProjects}</p>
+              </article>
+              <article className="summary-card">
+                <div className="card-header">
+                  <span className="card-icon">📈</span>
+                  <p className="card-label">Average Completion</p>
+                </div>
+                <p className="card-value">{averageCompletion}%</p>
+              </article>
+            </section>
+          )}
 
           {showCreateForm && (
             <section style={{ background: "#f9fafb", padding: "24px", borderRadius: "8px", marginBottom: "24px" }}>
@@ -295,6 +345,7 @@ function Projects() {
                       <div className="project-stats">
                         <span>📋 {totalTasks} tasks</span>
                         <span>✅ {completedTasks} completed</span>
+                        <span>👥 {getProjectUsers(project).length} students</span>
                       </div>
 
                       {totalTasks > 0 && (
