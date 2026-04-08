@@ -20,35 +20,52 @@ function Projects() {
   const [assigningStudent, setAssigningStudent] = useState(false);
   const [assignMessage, setAssignMessage] = useState("");
   const [assignMessageType, setAssignMessageType] = useState("info");
+  const [projectsError, setProjectsError] = useState("");
   const { logout, isTeacher } = useContext(AuthContext);
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchUserInfo();
-    fetchProjects();
+    initializePage();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const initializePage = async () => {
+    const me = await fetchUserInfo();
+    await fetchProjects(me?.role === "ADMIN");
+  };
 
   const fetchUserInfo = async () => {
     try {
       const res = await API.get("/users/me");
       setUserInfo(res.data);
+      return res.data;
     } catch (err) {
       console.error("Error fetching user info:", err);
+      return null;
     }
   };
 
-  const fetchProjects = async () => {
+  const fetchProjects = async (teacherModeOverride) => {
     try {
       setLoading(true);
-      let endpoint = isTeacher() ? "/projects" : "/projects/my-projects";
+      setProjectsError("");
+      const teacherMode =
+        typeof teacherModeOverride === "boolean"
+          ? teacherModeOverride
+          : isTeacher();
+      const endpoint = teacherMode ? "/projects" : "/projects/my-projects";
       const response = await API.get(endpoint);
-      const projectList = response.data || [];
-      setProjects(projectList);
+      const projectList = Array.isArray(response.data) ? response.data : null;
+      if (projectList !== null) {
+        setProjects(projectList);
+      } else {
+        setProjectsError("Could not load project list format from server.");
+      }
       return projectList;
     } catch (error) {
       console.error("Error fetching projects:", error);
-      return [];
+      setProjectsError("Could not load projects. Please try again.");
+      return null;
     } finally {
       setLoading(false);
     }
@@ -69,7 +86,10 @@ function Projects() {
       };
 
       const res = await API.post("/projects", newProject);
-      setProjects([...projects, res.data]);
+      setProjects((prev) => {
+        const safePrev = Array.isArray(prev) ? prev : [];
+        return [...safePrev, res.data];
+      });
       setFormData({ name: "", description: "" });
       setShowCreateForm(false);
       alert("Project created successfully!");
@@ -105,6 +125,10 @@ function Projects() {
     navigate(`/tasks?projectId=${projectId}`);
   };
 
+  const getProjectUsers = (project) => (Array.isArray(project?.users) ? project.users : []);
+  const getProjectTasks = (project) => (Array.isArray(project?.tasks) ? project.tasks : []);
+  const safeProjects = Array.isArray(projects) ? projects : [];
+
   const handleAssignStudentByEmail = async (e) => {
     e.preventDefault();
     const email = studentEmail.trim();
@@ -120,7 +144,9 @@ function Projects() {
       setStudentEmail("");
 
       const updatedProjects = await fetchProjects();
-      const refreshed = updatedProjects.find((p) => p.id === selectedProject.id);
+      const refreshed = Array.isArray(updatedProjects)
+        ? updatedProjects.find((p) => p.id === selectedProject.id)
+        : null;
       if (refreshed) {
         setSelectedProject(refreshed);
       }
@@ -214,7 +240,21 @@ function Projects() {
             </section>
           )}
 
-          {projects.length === 0 ? (
+          {projectsError && (
+            <section
+              style={{
+                marginBottom: "16px",
+                padding: "10px 12px",
+                borderRadius: "8px",
+                color: "#b91c1c",
+                background: "#fee2e2",
+              }}
+            >
+              {projectsError}
+            </section>
+          )}
+
+          {safeProjects.length === 0 ? (
             <section className="empty-state">
               <div className="empty-icon">📁</div>
               <h3>{isTeacher() ? "No Projects Yet" : "No Assigned Projects"}</h3>
@@ -232,11 +272,10 @@ function Projects() {
           ) : !isProjectOpen ? (
             <section className="projects-section">
               <div className="projects-grid">
-                {projects.map((project) => {
-                  const totalTasks = project.tasks ? project.tasks.length : 0;
-                  const completedTasks = project.tasks
-                    ? project.tasks.filter((t) => t.status === "COMPLETED").length
-                    : 0;
+                {safeProjects.map((project) => {
+                  const taskList = getProjectTasks(project);
+                  const totalTasks = taskList.length;
+                  const completedTasks = taskList.filter((t) => t.status === "COMPLETED").length;
                   const completionPercentage =
                     totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);
 
@@ -292,17 +331,20 @@ function Projects() {
                     {selectedProject.description || "No description provided."}
                   </p>
                   <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
-                    <span>📋 Tasks: {selectedProject.tasks?.length || 0}</span>
-                    <span>👥 Students: {selectedProject.users?.length || 0}</span>
+                    <span>📋 Tasks: {getProjectTasks(selectedProject).length}</span>
+                    <span>👥 Students: {getProjectUsers(selectedProject).length}</span>
                   </div>
 
-                  {selectedProject.users?.length > 0 && (
+                  {getProjectUsers(selectedProject).length > 0 && (
                     <div style={{ marginTop: "14px" }}>
                       <p style={{ marginBottom: "6px", color: "#374151" }}>Assigned Students:</p>
                       <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                        {selectedProject.users.map((u) => (
-                          <span key={u.id} style={{ background: "#f3f4f6", borderRadius: "999px", padding: "6px 10px", fontSize: "0.9rem" }}>
-                            {u.email}
+                        {getProjectUsers(selectedProject).map((u, index) => (
+                          <span
+                            key={u?.id ?? `${u?.email ?? "student"}-${index}`}
+                            style={{ background: "#f3f4f6", borderRadius: "999px", padding: "6px 10px", fontSize: "0.9rem" }}
+                          >
+                            {u?.email || u?.name || (typeof u === "string" ? u : "Student")}
                           </span>
                         ))}
                       </div>

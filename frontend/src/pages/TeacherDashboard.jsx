@@ -40,17 +40,26 @@ function TeacherDashboard() {
       const userRes = await API.get("/users/me");
       setUserInfo(userRes.data);
 
-      // Fetch all projects (teacher's projects)
-      const projectsRes = await API.get("/projects");
-      const projects = projectsRes.data || [];
+      // Fetch all projects/users/submissions without failing the whole dashboard on one 403.
+      const [projectsResult, usersResult, submissionsResult] = await Promise.allSettled([
+        API.get("/projects"),
+        API.get("/users"),
+        API.get("/submissions"),
+      ]);
 
-      // Fetch all users (students)
-      const usersRes = await API.get("/users");
-      const students = usersRes.data.filter((u) => u.role === "STUDENT") || [];
-
-      // Fetch all submissions
-      const submissionsRes = await API.get("/submissions");
-      const submissions = submissionsRes.data || [];
+      const projects =
+        projectsResult.status === "fulfilled" && Array.isArray(projectsResult.value.data)
+          ? projectsResult.value.data
+          : [];
+      const users =
+        usersResult.status === "fulfilled" && Array.isArray(usersResult.value.data)
+          ? usersResult.value.data
+          : [];
+      const submissions =
+        submissionsResult.status === "fulfilled" && Array.isArray(submissionsResult.value.data)
+          ? submissionsResult.value.data
+          : [];
+      const students = users.filter((u) => u.role === "STUDENT");
       const pending = submissions.filter((s) => s.status === "SUBMITTED").length;
 
       // Calculate total tasks
