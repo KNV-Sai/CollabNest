@@ -22,6 +22,9 @@ function Submissions() {
   const [reviewForms, setReviewForms] = useState({});
   const [actionMessage, setActionMessage] = useState("");
   const [actionType, setActionType] = useState("info");
+  const [reviewSavingId, setReviewSavingId] = useState(null);
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [showPastSubmissions, setShowPastSubmissions] = useState(false);
   const { logout, isTeacher } = useContext(AuthContext);
   const navigate = useNavigate();
 
@@ -122,6 +125,7 @@ function Submissions() {
     setActionMessage("");
     setActionType("info");
     try {
+      setReviewSavingId(submissionId);
       await API.put(`/submissions/${submissionId}/review`, form);
       setActionMessage("Submission reviewed successfully.");
       setActionType("success");
@@ -133,6 +137,8 @@ function Submissions() {
           : "Could not review this submission.";
       setActionMessage(msg);
       setActionType("error");
+    } finally {
+      setReviewSavingId(null);
     }
   };
 
@@ -176,6 +182,17 @@ function Submissions() {
   const averageGrade = gradedSubmissions.length
     ? (gradedSubmissions.reduce((sum, s) => sum + s.grade, 0) / gradedSubmissions.length).toFixed(1)
     : null;
+  const sortedSubmissions = [...submissions].sort((a, b) => {
+    const dateA = a?.submittedAt ? new Date(a.submittedAt).getTime() : 0;
+    const dateB = b?.submittedAt ? new Date(b.submittedAt).getTime() : 0;
+    return dateB - dateA;
+  });
+  const visibleByStatus =
+    statusFilter === "ALL"
+      ? sortedSubmissions
+      : sortedSubmissions.filter((submission) => submission.status === statusFilter);
+  const recentSubmissions = visibleByStatus.slice(0, 3);
+  const pastSubmissions = visibleByStatus.slice(3);
 
   return (
     <div className="dashboard-wrapper">
@@ -300,30 +317,65 @@ function Submissions() {
             </article>
           </section>
 
+          <section className="filter-section">
+            <button
+              className={`filter-btn ${statusFilter === "ALL" ? "active" : ""}`}
+              onClick={() => setStatusFilter("ALL")}
+            >
+              All ({submissions.length})
+            </button>
+            <button
+              className={`filter-btn ${statusFilter === "SUBMITTED" ? "active" : ""}`}
+              onClick={() => setStatusFilter("SUBMITTED")}
+            >
+              Submitted ({submissions.filter((s) => s.status === "SUBMITTED").length})
+            </button>
+            <button
+              className={`filter-btn ${statusFilter === "APPROVED" ? "active" : ""}`}
+              onClick={() => setStatusFilter("APPROVED")}
+            >
+              Approved ({submissions.filter((s) => s.status === "APPROVED").length})
+            </button>
+            <button
+              className={`filter-btn ${statusFilter === "REJECTED" ? "active" : ""}`}
+              onClick={() => setStatusFilter("REJECTED")}
+            >
+              Rejected ({submissions.filter((s) => s.status === "REJECTED").length})
+            </button>
+          </section>
+
           {error ? (
             <section className="empty-state">
               <div className="empty-icon">⚠️</div>
               <h3>Unable to Load Submissions</h3>
               <p>{error}</p>
             </section>
-          ) : submissions.length === 0 ? (
+          ) : visibleByStatus.length === 0 ? (
             <section className="empty-state">
               <div className="empty-icon">📤</div>
               <h3>No Submissions</h3>
-              <p>You haven't submitted any group work yet. Complete your projects and submit them here.</p>
+              <p>No submissions match this filter yet.</p>
             </section>
           ) : (
+            <>
             <section className="submissions-section">
+              <div className="section-header">
+                <h3>Recent Submissions</h3>
+              </div>
               <div className="submissions-list">
-                {submissions.map((submission) => {
+                {recentSubmissions.map((submission) => {
                   const badgeInfo = getStatusBadge(submission.status);
+                  const submittedDate = submission.submittedAt
+                    ? new Date(submission.submittedAt).toLocaleDateString()
+                    : "-";
                   return (
-                    <div key={submission.id} className="submission-card" style={{ border: "1px solid #e5e9f2", borderRadius: "16px", padding: "20px", background: "#fff", boxShadow: "0 10px 30px rgba(15, 23, 42, 0.06)", marginBottom: "16px" }}>
+                    <article key={submission.id} className="submission-card">
                       <div className="submission-header">
-                        <div>
-                          <h4>{submission.project?.name || submission.projectName || "Project"}</h4>
+                        <div className="submission-title-block">
+                          <p className="submission-eyebrow">Project Submission</p>
+                          <h4>{submission.title || submission.project?.name || submission.projectName || "Project"}</h4>
                           <p className="submission-date">
-                            📅 Submitted: {submission.submittedAt ? new Date(submission.submittedAt).toLocaleDateString() : "-"}
+                            Submitted on {submittedDate}
                           </p>
                         </div>
                         <span
@@ -335,31 +387,47 @@ function Submissions() {
                       </div>
 
                       <div className="submission-content">
-                        {submission.description && (
-                          <div>
-                            <p className="label">Description:</p>
-                            <p>{submission.description}</p>
-                          </div>
-                        )}
+                        <div className="submission-meta-grid">
+                          <p className="submission-meta-item">
+                            <span className="meta-label">Project</span>
+                            <span>{submission.project?.name || submission.projectName || "Not available"}</span>
+                          </p>
+                          <p className="submission-meta-item">
+                            <span className="meta-label">Submitted By</span>
+                            <span>{submission.submittedBy?.name || submission.submittedBy?.email || "Unknown"}</span>
+                          </p>
+                          <p className="submission-meta-item">
+                            <span className="meta-label">Reviewed By</span>
+                            <span>{submission.reviewedBy?.name || submission.reviewedBy?.email || "Not reviewed yet"}</span>
+                          </p>
+                          <p className="submission-meta-item">
+                            <span className="meta-label">Reviewed At</span>
+                            <span>
+                              {submission.reviewedAt
+                                ? new Date(submission.reviewedAt).toLocaleString()
+                                : "Not reviewed yet"}
+                            </span>
+                          </p>
+                        </div>
 
-                        {submission.submittedBy && (
-                          <div>
-                            <p className="label">Submitted By:</p>
-                            <p>{submission.submittedBy.name || submission.submittedBy.email || "-"}</p>
+                        {submission.description && (
+                          <div className="submission-section">
+                            <p className="label">Description:</p>
+                            <p className="section-text">{submission.description}</p>
                           </div>
                         )}
 
                         {submission.feedback && (
-                          <div className="feedback-box">
+                          <div className="feedback-box submission-section">
                             <p className="label">Feedback:</p>
-                            <p>{submission.feedback}</p>
+                            <p className="section-text">{submission.feedback}</p>
                           </div>
                         )}
 
-                        {submission.grade && (
-                          <div className="grade-box">
+                        {typeof submission.grade === "number" && (
+                          <div className="grade-box submission-section">
                             <p className="label">Grade:</p>
-                            <p className="grade-value">{submission.grade}</p>
+                            <p className="grade-value">{submission.grade}%</p>
                           </div>
                         )}
                       </div>
@@ -383,9 +451,9 @@ function Submissions() {
                       </div>
 
                       {isTeacher() && (
-                        <div className="form-section" style={{ marginTop: "14px", marginBottom: 0, padding: "16px", borderRadius: "12px" }}>
-                          <p style={{ marginBottom: "8px", fontWeight: 600 }}>Review & Grade</p>
-                          <div className="project-form" style={{ gap: "12px" }}>
+                        <div className="submission-review-panel">
+                          <p className="submission-review-title">Review & Grade</p>
+                          <div className="project-form submission-review-form">
                             <select
                               className="form-input"
                               value={getReviewForm(submission).status}
@@ -400,7 +468,7 @@ function Submissions() {
                               value={getReviewForm(submission).feedback}
                               onChange={(e) => updateReviewForm(submission.id, "feedback", e.target.value)}
                               placeholder="Feedback for student"
-                              style={{ minHeight: "80px" }}
+                              style={{ minHeight: "90px" }}
                             />
                             <input
                               className="form-input"
@@ -414,18 +482,65 @@ function Submissions() {
                             />
                             <button
                               className="submit-btn"
+                              disabled={reviewSavingId === submission.id}
                               onClick={() => handleReviewSubmission(submission.id)}
                             >
-                              Save Review
+                              {reviewSavingId === submission.id ? "Saving..." : "Save Review"}
                             </button>
                           </div>
                         </div>
                       )}
-                    </div>
+                    </article>
                   );
                 })}
               </div>
             </section>
+            {pastSubmissions.length > 0 && (
+              <section className="submissions-section">
+                <button
+                  className="filter-btn"
+                  onClick={() => setShowPastSubmissions((prev) => !prev)}
+                >
+                  {showPastSubmissions ? "Hide" : "Show"} Past Submissions ({pastSubmissions.length})
+                </button>
+                {showPastSubmissions && (
+                  <div className="submissions-list" style={{ marginTop: "14px" }}>
+                    {pastSubmissions.map((submission) => {
+                      const badgeInfo = getStatusBadge(submission.status);
+                      const submittedDate = submission.submittedAt
+                        ? new Date(submission.submittedAt).toLocaleDateString()
+                        : "-";
+                      return (
+                        <article key={submission.id} className="submission-card">
+                          <div className="submission-header">
+                            <div className="submission-title-block">
+                              <p className="submission-eyebrow">Past Submission</p>
+                              <h4>{submission.title || submission.project?.name || submission.projectName || "Project"}</h4>
+                              <p className="submission-date">Submitted on {submittedDate}</p>
+                            </div>
+                            <span
+                              className="submission-status"
+                              style={{ backgroundColor: badgeInfo.bg, color: badgeInfo.color }}
+                            >
+                              {badgeInfo.label}
+                            </span>
+                          </div>
+                          <div className="submission-content">
+                            {submission.description && (
+                              <div className="submission-section">
+                                <p className="label">Description:</p>
+                                <p className="section-text">{submission.description}</p>
+                              </div>
+                            )}
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                )}
+              </section>
+            )}
+            </>
           )}
         </main>
       </div>

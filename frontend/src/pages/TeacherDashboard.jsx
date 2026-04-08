@@ -17,6 +17,7 @@ function TeacherDashboard() {
   });
   const [recentProjects, setRecentProjects] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [dashboardError, setDashboardError] = useState("");
   const { user, logout, loading: authLoading } = useContext(AuthContext);
   const navigate = useNavigate();
 
@@ -35,6 +36,7 @@ function TeacherDashboard() {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
+      setDashboardError("");
 
       // Fetch user info
       const userRes = await API.get("/users/me");
@@ -80,6 +82,7 @@ function TeacherDashboard() {
       setRecentProjects(projects.slice(0, 3));
     } catch (err) {
       console.error("Error fetching dashboard data:", err);
+      setDashboardError("Could not fully load dashboard stats. Please refresh.");
     } finally {
       setLoading(false);
     }
@@ -114,11 +117,17 @@ function TeacherDashboard() {
         <main className="dashboard-main">
           <section className="dashboard-header">
             <h2>Teacher Dashboard</h2>
-            <p style={{ color: "#6b7280", marginTop: "8px" }}>👨‍🏫 Manage projects, tasks, and review submissions</p>
+            <p className="dashboard-intro">Manage projects, monitor tasks, and review submissions from one panel.</p>
           </section>
 
+          {dashboardError && (
+            <section className="error-banner">
+              <p>{dashboardError}</p>
+            </section>
+          )}
+
           <section className="summary-cards">
-            <article className="summary-card">
+            <article className="summary-card clickable-card" onClick={() => navigate("/projects")} style={{ cursor: "pointer" }}>
               <div className="card-header">
                 <span className="card-icon">📁</span>
                 <p className="card-label">Projects Created</p>
@@ -170,7 +179,7 @@ function TeacherDashboard() {
 
               <div className="recent-grid">
                 {recentProjects.map((project) => (
-                  <div key={project.id} className="recent-card">
+                  <div key={project.id} className="recent-card clickable-card" onClick={() => navigate("/projects")} style={{ cursor: "pointer" }}>
                     <div className="card-top">
                       <h4>{project.name}</h4>
                     </div>

@@ -125,8 +125,32 @@ function Projects() {
     navigate(`/tasks?projectId=${projectId}`);
   };
 
+  const handleViewStudentProjectTasks = (projectId, studentId) => {
+    const params = new URLSearchParams({
+      projectId: String(projectId),
+      studentId: String(studentId),
+    });
+    navigate(`/tasks?${params.toString()}`);
+  };
+
   const getProjectUsers = (project) => (Array.isArray(project?.users) ? project.users : []);
   const getProjectTasks = (project) => (Array.isArray(project?.tasks) ? project.tasks : []);
+  const getStudentTaskSummary = (project) => {
+    const users = getProjectUsers(project);
+    const tasks = getProjectTasks(project);
+    return users.map((student) => {
+      const studentTasks = tasks.filter(
+        (task) => task?.assignee?.id != null && student?.id != null && task.assignee.id === student.id
+      );
+      const completed = studentTasks.filter((task) => task.status === "COMPLETED").length;
+      return {
+        student,
+        created: studentTasks.length,
+        completed,
+        pending: studentTasks.length - completed,
+      };
+    });
+  };
   const safeProjects = Array.isArray(projects) ? projects : [];
   const projectProgressStats = safeProjects.map((project) => {
     const taskList = getProjectTasks(project);
@@ -397,6 +421,37 @@ function Projects() {
                           >
                             {u?.email || u?.name || (typeof u === "string" ? u : "Student")}
                           </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {isTeacher() && (
+                    <div className="student-stats-section">
+                      <p className="student-stats-title">Student Task Breakdown</p>
+                      <div className="student-stats-list">
+                        {getStudentTaskSummary(selectedProject).map(({ student, created, completed, pending }, index) => (
+                          <article
+                            key={student?.id ?? `${student?.email ?? "student"}-${index}`}
+                            className="student-stats-card"
+                          >
+                            <div>
+                              <p className="student-name">{student?.name || student?.email || "Student"}</p>
+                              <p className="student-email">{student?.email || "No email available"}</p>
+                            </div>
+                            <div className="student-task-metrics">
+                              <span>Created: {created}</span>
+                              <span>Completed: {completed}</span>
+                              <span>Pending: {pending}</span>
+                            </div>
+                            <button
+                              className="view-all-link"
+                              onClick={() => handleViewStudentProjectTasks(selectedProject.id, student?.id)}
+                              disabled={!student?.id}
+                            >
+                              Open Detailed Tasks →
+                            </button>
+                          </article>
                         ))}
                       </div>
                     </div>

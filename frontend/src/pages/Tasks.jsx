@@ -16,6 +16,7 @@ function Tasks() {
   const [actionMessage, setActionMessage] = useState("");
   const [actionType, setActionType] = useState("info");
   const [creatingTask, setCreatingTask] = useState(false);
+  const [tasksError, setTasksError] = useState("");
   const [taskForm, setTaskForm] = useState({
     projectId: "",
     name: "",
@@ -26,6 +27,7 @@ function Tasks() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const projectId = searchParams.get("projectId");
+  const studentId = searchParams.get("studentId");
 
   useEffect(() => {
     fetchUserInfo();
@@ -57,6 +59,7 @@ function Tasks() {
   const fetchTasks = async () => {
     try {
       setLoading(true);
+      setTasksError("");
       if (projectId) {
         if (isTeacher()) {
           const response = await API.get(`/tasks/project/${projectId}`);
@@ -74,6 +77,8 @@ function Tasks() {
       }
     } catch (error) {
       console.error("Error fetching tasks:", error);
+      setTasks([]);
+      setTasksError("Could not load tasks. Please refresh.");
     } finally {
       setLoading(false);
     }
@@ -139,6 +144,9 @@ function Tasks() {
   };
 
   const filteredTasks = tasks.filter((task) => {
+    if (isTeacher() && projectId && studentId && String(task.assignee?.id) !== String(studentId)) {
+      return false;
+    }
     if (filterStatus === "ALL") return true;
     if (filterStatus === "PENDING") {
       return task.status === "PENDING" || task.status === "TODO";
@@ -158,18 +166,23 @@ function Tasks() {
     const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
     return { id: project.id, name: project.name, total, completed, percent };
   });
+  const selectedProject = (projects || []).find((project) => String(project.id) === String(projectId));
+  const selectedStudent =
+    selectedProject && Array.isArray(selectedProject.users)
+      ? selectedProject.users.find((user) => String(user.id) === String(studentId))
+      : null;
 
-  const getStatusColor = (status) => {
+  const getStatusStyle = (status) => {
     switch (status) {
       case "COMPLETED":
-        return "#10b981";
+        return { bg: "#dcfce7", color: "#166534" };
       case "IN_PROGRESS":
-        return "#f59e0b";
+        return { bg: "#fef3c7", color: "#92400e" };
       case "PENDING":
       case "TODO":
-        return "#ef4444";
+        return { bg: "#fee2e2", color: "#991b1b" };
       default:
-        return "#6b7280";
+        return { bg: "#e5e7eb", color: "#374151" };
     }
   };
 
@@ -211,16 +224,29 @@ function Tasks() {
         <main className="dashboard-main">
           <section className="dashboard-header">
             <h2>Tasks</h2>
-            {projectId ? (
-              <p style={{ color: "#6b7280", marginTop: "8px" }}>📁 Showing tasks for selected project</p>
+            {projectId && studentId && selectedStudent ? (
+              <p className="dashboard-intro">
+                Detailed tasks for {selectedStudent.name || selectedStudent.email} in {selectedProject?.name || "selected project"}.
+              </p>
+            ) : projectId && isTeacher() ? (
+              <p className="dashboard-intro">
+                Select a student below to view all tasks they created in this project with status.
+              </p>
+            ) : projectId ? (
+              <p className="dashboard-intro">Showing tasks for selected project.</p>
             ) : (
-              isTeacher() && <p style={{ color: "#6b7280", marginTop: "8px" }}>👨‍🏫 All tasks in the system</p>
+              isTeacher() && <p className="dashboard-intro">All tasks in the system with progress overview.</p>
             )}
           </section>
 
           {actionMessage && (
             <section className={`message-banner ${actionType === "error" ? "error" : "success"}`}>
               <p>{actionMessage}</p>
+            </section>
+          )}
+          {tasksError && (
+            <section className="error-banner">
+              <p>{tasksError}</p>
             </section>
           )}
 
@@ -291,7 +317,12 @@ function Tasks() {
               <h3>Project Progress</h3>
               <div className="projects-grid">
                 {projectProgress.map((project) => (
-                  <article key={project.id} className="project-card">
+                  <article
+                    key={project.id}
+                    className="project-card"
+                    style={{ cursor: "pointer" }}
+                    onClick={() => navigate(`/tasks?projectId=${project.id}`)}
+                  >
                     <div className="project-header">
                       <h4>{project.name}</h4>
                       <span className="project-status">{project.percent}% done</span>
@@ -302,9 +333,55 @@ function Tasks() {
                     <div className="progress-bar">
                       <div className="progress-fill" style={{ width: `${project.percent}%` }} />
                     </div>
-                    <p className="progress-text">Track this project from Projects page for full details.</p>
+                    <p className="progress-text">Click to open this project's student tasks.</p>
                   </article>
                 ))}
+              </div>
+            </section>
+          )}
+
+          {isTeacher() && projectId && selectedProject && (
+            <section className="projects-section">
+              <div className="section-header">
+                <h3>Student Task Details</h3>
+                <button className="view-all-link" onClick={() => navigate("/tasks")}>
+                  Back to all projects →
+                </button>
+              </div>
+              <div className="student-stats-list">
+                {(Array.isArray(selectedProject.users) ? selectedProject.users : []).map((student, index) => {
+                  const studentTasks = tasks.filter(
+                    (task) => task?.assignee?.id != null && student?.id != null && task.assignee.id === student.id
+                  );
+                  const completed = studentTasks.filter((task) => task.status === "COMPLETED").length;
+                  return (
+                    <article key={student?.id ?? `${student?.email ?? "student"}-${index}`} className="student-stats-card">
+                      <div>
+                        <p className="student-name">{student?.name || student?.email || "Student"}</p>
+                        <p className="student-email">{student?.email || "No email available"}</p>
+                      </div>
+                      <div className="student-task-metrics">
+                        <span>Created: {studentTasks.length}</span>
+                        <span>Completed: {completed}</span>
+                        <span>Pending: {studentTasks.length - completed}</span>
+                      </div>
+                      <button
+                        className="view-all-link"
+                        onClick={() =>
+                          navigate(
+                            `/tasks?${new URLSearchParams({
+                              projectId: String(projectId),
+                              studentId: String(student?.id || ""),
+                            }).toString()}`
+                          )
+                        }
+                        disabled={!student?.id}
+                      >
+                        Open Student Tasks →
+                      </button>
+                    </article>
+                  );
+                })}
               </div>
             </section>
           )}
@@ -381,8 +458,10 @@ function Tasks() {
           ) : (
             <section className="tasks-section">
               <div className="tasks-list">
-                {filteredTasks.map((task) => (
-                  <div key={task.id} className="task-item">
+                {filteredTasks.map((task) => {
+                  const statusStyle = getStatusStyle(task.status);
+                  return (
+                    <article key={task.id} className="task-item">
                     <div className="task-left">
                       <input
                         type="checkbox"
@@ -418,13 +497,14 @@ function Tasks() {
                       )}
                       <span
                         className="task-status"
-                        style={{ backgroundColor: getStatusColor(task.status) }}
+                        style={{ backgroundColor: statusStyle.bg, color: statusStyle.color }}
                       >
                         {getStatusLabel(task.status)}
                       </span>
                     </div>
-                  </div>
-                ))}
+                    </article>
+                  );
+                })}
               </div>
             </section>
           )}

@@ -17,6 +17,7 @@ function Dashboard() {
   });
   const [recentProjects, setRecentProjects] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [dashboardError, setDashboardError] = useState("");
   const { logout, loading: authLoading } = useContext(AuthContext);
   const navigate = useNavigate();
 
@@ -30,26 +31,36 @@ function Dashboard() {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
+      setDashboardError("");
 
       // Fetch user info
       const userRes = await API.get("/users/me");
       setUserInfo(userRes.data);
 
-      // Fetch projects - filtered by user
-      const projectsRes = await API.get("/projects/my-projects");
-      const projects = projectsRes.data || [];
+      const projectsResult = await Promise.allSettled([
+        API.get("/projects/my-projects"),
+        API.get("/projects"),
+      ]);
+      const myProjects = projectsResult[0].status === "fulfilled" ? projectsResult[0].value.data : null;
+      const allProjects = projectsResult[1].status === "fulfilled" ? projectsResult[1].value.data : null;
+
+      // Prefer assigned projects; if backend returns unexpected shape, gracefully fallback.
+      const projects = Array.isArray(myProjects)
+        ? myProjects
+        : Array.isArray(allProjects)
+        ? allProjects
+        : [];
 
       // Calculate stats
       let totalTasks = 0;
       let completedTasks = 0;
 
       projects.forEach((project) => {
-        if (project.tasks) {
-          totalTasks += project.tasks.length;
-          completedTasks += project.tasks.filter(
+        const projectTasks = Array.isArray(project?.tasks) ? project.tasks : [];
+        totalTasks += projectTasks.length;
+        completedTasks += projectTasks.filter(
             (task) => task.status === "COMPLETED"
           ).length;
-        }
       });
 
       setStats({
@@ -62,6 +73,7 @@ function Dashboard() {
       setRecentProjects(projects.slice(0, 3));
     } catch (err) {
       console.error("Error fetching dashboard data:", err);
+      setDashboardError("Could not fully load dashboard stats. Please refresh.");
     } finally {
       setLoading(false);
     }
@@ -101,10 +113,17 @@ function Dashboard() {
         <main className="dashboard-main">
           <section className="dashboard-header">
             <h2>Dashboard</h2>
+            <p className="dashboard-intro">Track your assigned projects and task progress in one place.</p>
           </section>
 
+          {dashboardError && (
+            <section className="error-banner">
+              <p>{dashboardError}</p>
+            </section>
+          )}
+
           <section className="summary-cards">
-            <article className="summary-card">
+            <article className="summary-card clickable-card" onClick={() => navigate("/projects")} style={{ cursor: "pointer" }}>
               <div className="card-header">
                 <span className="card-icon">📁</span>
                 <p className="card-label">Active Projects</p>
@@ -163,7 +182,7 @@ function Dashboard() {
 
               <div className="recent-grid">
                 {recentProjects.map((project) => (
-                  <div key={project.id} className="recent-card">
+                  <div key={project.id} className="recent-card clickable-card" onClick={() => navigate("/projects")} style={{ cursor: "pointer" }}>
                     <div className="card-top">
                       <h4>{project.name}</h4>
                       <span className="status-badge">Active</span>
