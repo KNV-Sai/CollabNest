@@ -2,6 +2,7 @@ package server.service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.HashSet;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,12 @@ public class ProjectService {
     }
 
     public Project create(Project project) {
+        if (project.getUsers() == null) {
+            project.setUsers(new HashSet<>());
+        }
+        if (project.getTasks() == null) {
+            project.setTasks(new HashSet<>());
+        }
         return projectRepository.save(project);
     }
 
@@ -61,19 +68,33 @@ public class ProjectService {
             .orElse(false);
     }
 
-    public void assignStudent(Long projectId, Long studentId) {
+    public boolean assignStudent(Long projectId, Long studentId) {
         Optional<Project> projectOpt = projectRepository.findById(projectId);
         Optional<User> studentOpt = userRepository.findById(studentId);
 
-        if (projectOpt.isPresent() && studentOpt.isPresent()) {
-            Project project = projectOpt.get();
-            User student = studentOpt.get();
-
-            // Add student to project if not already present
-            if (!project.getUsers().contains(student)) {
-                project.getUsers().add(student);
-                projectRepository.save(project);
-            }
+        if (projectOpt.isEmpty() || studentOpt.isEmpty()) {
+            return false;
         }
+
+        Project project = projectOpt.get();
+        User student = studentOpt.get();
+
+        if (project.getUsers() == null) {
+            project.setUsers(new HashSet<>());
+        }
+        if (student.getProjects() == null) {
+            student.setProjects(new HashSet<>());
+        }
+
+        if (project.getUsers().contains(student)) {
+            return false;
+        }
+
+        // Keep both sides in sync and save owning side (User.projects)
+        project.getUsers().add(student);
+        student.getProjects().add(project);
+        userRepository.save(student);
+        projectRepository.save(project);
+        return true;
     }
 }

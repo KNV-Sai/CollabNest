@@ -1,6 +1,7 @@
 package server.controller;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,7 +15,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import server.model.Role;
 import server.model.Task;
+import server.model.TaskStatus;
 import server.model.User;
 import server.service.TaskService;
 import server.service.UserService;
@@ -32,16 +35,23 @@ public class TaskController {
     }
 
     @PostMapping
-    public ResponseEntity<Task> create(@RequestBody Task task) {
+    public ResponseEntity<Task> create(@RequestBody Task task, Authentication authentication) {
+        if (!isAdmin(authentication)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         Task created = taskService.create(task);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @GetMapping
-    public ResponseEntity<List<Task>> getAll() {
+    public ResponseEntity<List<Task>> getAll(Authentication authentication) {
+        if (!isAdmin(authentication)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         return ResponseEntity.ok(taskService.getAll());
     }
 
+    // Get tasks assigned to the current logged-in user
     @GetMapping("/my-tasks")
     public ResponseEntity<List<Task>> getMyTasks(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()) {
@@ -53,6 +63,12 @@ public class TaskController {
             return ResponseEntity.notFound().build();
         }
         return ResponseEntity.ok(taskService.getTasksByAssignee(user.getId()));
+    }
+
+    // Get all tasks for a specific project
+    @GetMapping("/project/{projectId}")
+    public ResponseEntity<List<Task>> getByProject(@PathVariable Long projectId) {
+        return ResponseEntity.ok(taskService.getTasksByProject(projectId));
     }
 
     @GetMapping("/{id}")
@@ -69,10 +85,41 @@ public class TaskController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    // Convenience PATCH endpoint for status-only updates from student UI
+    @PutMapping("/{id}/status")
+    public ResponseEntity<Task> updateStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        String statusStr = body.get("status");
+        if (statusStr == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        try {
+            TaskStatus status = TaskStatus.valueOf(statusStr);
+            Task partial = new Task();
+            partial.setStatus(status);
+            return taskService.update(id, partial)
+                    .map(ResponseEntity::ok)
+                    .orElse(ResponseEntity.notFound().build());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
+    public ResponseEntity<Void> delete(@PathVariable Long id, Authentication authentication) {
+        if (!isAdmin(authentication)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         return taskService.delete(id)
                 ? ResponseEntity.noContent().build()
                 : ResponseEntity.notFound().build();
+    }
+
+    private boolean isAdmin(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return false;
+        }
+        return userService.getByEmail(authentication.getName())
+            .map(user -> user.getRole() == Role.ADMIN)
+            .orElse(false);
     }
 }

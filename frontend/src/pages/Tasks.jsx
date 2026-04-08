@@ -1,6 +1,6 @@
 import { useState, useEffect, useContext } from "react";
-import { useNavigate } from "react-router-dom";
-import { AuthContext } from "../context/AuthContext";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { AuthContext } from "../context/auth-context";
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
 import API from "../api/axios";
@@ -12,13 +12,16 @@ function Tasks() {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState("ALL"); // ALL, PENDING, COMPLETED
-  const { user, logout, isTeacher } = useContext(AuthContext);
+  const { logout, isTeacher } = useContext(AuthContext);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const projectId = searchParams.get("projectId");
 
   useEffect(() => {
     fetchUserInfo();
     fetchTasks();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]);
 
   const fetchUserInfo = async () => {
     try {
@@ -32,10 +35,21 @@ function Tasks() {
   const fetchTasks = async () => {
     try {
       setLoading(true);
-      // Students get their own tasks, teachers see all tasks
-      const endpoint = isTeacher() ? "/tasks" : "/tasks/my-tasks";
-      const response = await API.get(endpoint);
-      setTasks(response.data || []);
+      if (projectId) {
+        if (isTeacher()) {
+          const response = await API.get(`/tasks/project/${projectId}`);
+          setTasks(response.data || []);
+        } else {
+          const response = await API.get("/tasks/my-tasks");
+          const myTasks = response.data || [];
+          setTasks(myTasks.filter((task) => String(task.project?.id) === String(projectId)));
+        }
+      } else {
+        // Students get their own tasks, teachers see all tasks
+        const endpoint = isTeacher() ? "/tasks" : "/tasks/my-tasks";
+        const response = await API.get(endpoint);
+        setTasks(response.data || []);
+      }
     } catch (error) {
       console.error("Error fetching tasks:", error);
     } finally {
@@ -63,6 +77,9 @@ function Tasks() {
 
   const filteredTasks = tasks.filter((task) => {
     if (filterStatus === "ALL") return true;
+    if (filterStatus === "PENDING") {
+      return task.status === "PENDING" || task.status === "TODO";
+    }
     return task.status === filterStatus;
   });
 
@@ -79,6 +96,7 @@ function Tasks() {
       case "IN_PROGRESS":
         return "#f59e0b";
       case "PENDING":
+      case "TODO":
         return "#ef4444";
       default:
         return "#6b7280";
@@ -92,6 +110,7 @@ function Tasks() {
       case "IN_PROGRESS":
         return "⏳ In Progress";
       case "PENDING":
+      case "TODO":
         return "⭕ Pending";
       default:
         return status;
@@ -122,7 +141,11 @@ function Tasks() {
         <main className="dashboard-main">
           <section className="dashboard-header">
             <h2>Tasks</h2>
-            {isTeacher() && <p style={{ color: "#6b7280", marginTop: "8px" }}>👨‍🏫 All tasks in the system</p>}
+            {projectId ? (
+              <p style={{ color: "#6b7280", marginTop: "8px" }}>📁 Showing tasks for selected project</p>
+            ) : (
+              isTeacher() && <p style={{ color: "#6b7280", marginTop: "8px" }}>👨‍🏫 All tasks in the system</p>
+            )}
           </section>
 
           {/* Task Stats */}
@@ -206,7 +229,7 @@ function Tasks() {
                         onChange={(e) =>
                           handleTaskStatusChange(
                             task.id,
-                            e.target.checked ? "COMPLETED" : "PENDING"
+                            e.target.checked ? "COMPLETED" : "TODO"
                           )
                         }
                         className="task-checkbox"

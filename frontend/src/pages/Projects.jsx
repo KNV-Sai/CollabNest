@@ -1,6 +1,6 @@
 import { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
-import { AuthContext } from "../context/AuthContext";
+import { AuthContext } from "../context/auth-context";
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
 import API from "../api/axios";
@@ -13,18 +13,20 @@ function Projects() {
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [formData, setFormData] = useState({ name: "", description: "" });
-  const [students, setStudents] = useState([]);
-  const [selectedStudents, setSelectedStudents] = useState([]);
   const [submitting, setSubmitting] = useState(false);
-  const { user, logout, isTeacher } = useContext(AuthContext);
+  const [selectedProject, setSelectedProject] = useState(null);
+  const [isProjectOpen, setIsProjectOpen] = useState(false);
+  const [studentEmail, setStudentEmail] = useState("");
+  const [assigningStudent, setAssigningStudent] = useState(false);
+  const [assignMessage, setAssignMessage] = useState("");
+  const [assignMessageType, setAssignMessageType] = useState("info");
+  const { logout, isTeacher } = useContext(AuthContext);
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchUserInfo();
     fetchProjects();
-    if (isTeacher()) {
-      fetchStudents();
-    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchUserInfo = async () => {
@@ -36,24 +38,17 @@ function Projects() {
     }
   };
 
-  const fetchStudents = async () => {
-    try {
-      const res = await API.get("/users");
-      const studentList = res.data.filter((u) => u.role === "STUDENT");
-      setStudents(studentList);
-    } catch (err) {
-      console.error("Error fetching students:", err);
-    }
-  };
-
   const fetchProjects = async () => {
     try {
       setLoading(true);
       let endpoint = isTeacher() ? "/projects" : "/projects/my-projects";
       const response = await API.get(endpoint);
-      setProjects(response.data || []);
+      const projectList = response.data || [];
+      setProjects(projectList);
+      return projectList;
     } catch (error) {
       console.error("Error fetching projects:", error);
+      return [];
     } finally {
       setLoading(false);
     }
@@ -89,6 +84,56 @@ function Projects() {
   const handleLogout = () => {
     logout();
     navigate("/");
+  };
+
+  const handleOpenProject = (project) => {
+    setSelectedProject(project);
+    setIsProjectOpen(true);
+    setAssignMessage("");
+    setStudentEmail("");
+  };
+
+  const handleCloseProject = () => {
+    setIsProjectOpen(false);
+    setSelectedProject(null);
+    setAssignMessage("");
+    setAssignMessageType("info");
+    setStudentEmail("");
+  };
+
+  const handleViewProjectTasks = (projectId) => {
+    navigate(`/tasks?projectId=${projectId}`);
+  };
+
+  const handleAssignStudentByEmail = async (e) => {
+    e.preventDefault();
+    const email = studentEmail.trim();
+    if (!email || !selectedProject) return;
+
+    setAssigningStudent(true);
+    setAssignMessage("");
+    setAssignMessageType("info");
+    try {
+      await API.post(`/projects/${selectedProject.id}/assign-student-by-email`, { email });
+      setAssignMessage("Student assigned successfully.");
+      setAssignMessageType("success");
+      setStudentEmail("");
+
+      const updatedProjects = await fetchProjects();
+      const refreshed = updatedProjects.find((p) => p.id === selectedProject.id);
+      if (refreshed) {
+        setSelectedProject(refreshed);
+      }
+    } catch (error) {
+      const message =
+        typeof error.response?.data === "string"
+          ? error.response.data
+          : "Could not assign student. Check email and try again.";
+      setAssignMessage(message);
+      setAssignMessageType("error");
+    } finally {
+      setAssigningStudent(false);
+    }
   };
 
   if (loading) {
@@ -184,7 +229,7 @@ function Projects() {
                 </button>
               )}
             </section>
-          ) : (
+          ) : !isProjectOpen ? (
             <section className="projects-section">
               <div className="projects-grid">
                 {projects.map((project) => {
@@ -196,7 +241,12 @@ function Projects() {
                     totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);
 
                   return (
-                    <div key={project.id} className="project-card">
+                    <div
+                      key={project.id}
+                      className="project-card"
+                      onClick={() => handleOpenProject(project)}
+                      style={{ cursor: "pointer" }}
+                    >
                       <div className="project-header">
                         <h4>{project.name}</h4>
                         <span className="project-status">Active</span>
@@ -214,11 +264,99 @@ function Projects() {
                         </div>
                       )}
                       <p className="progress-text">{completionPercentage}% complete</p>
+                      <p className="card-meta" style={{ marginTop: "8px" }}>
+                        Click to open project
+                      </p>
                     </div>
                   );
                 })}
               </div>
             </section>
+          ) : (
+            selectedProject && (
+              <section className="projects-section">
+                <div
+                  style={{
+                    marginTop: "12px",
+                    background: "#ffffff",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: "10px",
+                    padding: "20px",
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+                    <h3 style={{ marginBottom: "8px" }}>{selectedProject.name}</h3>
+                    <button className="cta-button" onClick={handleCloseProject}>← Back to all projects</button>
+                  </div>
+                  <p style={{ color: "#4b5563", marginBottom: "12px" }}>
+                    {selectedProject.description || "No description provided."}
+                  </p>
+                  <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
+                    <span>📋 Tasks: {selectedProject.tasks?.length || 0}</span>
+                    <span>👥 Students: {selectedProject.users?.length || 0}</span>
+                  </div>
+
+                  {selectedProject.users?.length > 0 && (
+                    <div style={{ marginTop: "14px" }}>
+                      <p style={{ marginBottom: "6px", color: "#374151" }}>Assigned Students:</p>
+                      <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                        {selectedProject.users.map((u) => (
+                          <span key={u.id} style={{ background: "#f3f4f6", borderRadius: "999px", padding: "6px 10px", fontSize: "0.9rem" }}>
+                            {u.email}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div style={{ marginTop: "16px" }}>
+                    <button
+                      className="cta-button"
+                      onClick={() => handleViewProjectTasks(selectedProject.id)}
+                    >
+                      Open Project Tasks
+                    </button>
+                  </div>
+
+                  {isTeacher() && (
+                    <form onSubmit={handleAssignStudentByEmail} style={{ marginTop: "20px" }}>
+                      <h4 style={{ marginBottom: "8px" }}>Assign Student by Email</h4>
+                      <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                        <input
+                          type="email"
+                          placeholder="student@example.com"
+                          value={studentEmail}
+                          onChange={(e) => setStudentEmail(e.target.value)}
+                          required
+                          style={{
+                            flex: "1 1 260px",
+                            padding: "10px",
+                            border: "1px solid #d1d5db",
+                            borderRadius: "6px",
+                          }}
+                        />
+                        <button type="submit" className="cta-button" disabled={assigningStudent}>
+                          {assigningStudent ? "Assigning..." : "Assign Student"}
+                        </button>
+                      </div>
+                      {assignMessage && (
+                        <p
+                          style={{
+                            marginTop: "10px",
+                            color: assignMessageType === "error" ? "#b91c1c" : "#166534",
+                            background: assignMessageType === "error" ? "#fee2e2" : "#dcfce7",
+                            padding: "8px 10px",
+                            borderRadius: "6px",
+                          }}
+                        >
+                          {assignMessage}
+                        </p>
+                      )}
+                    </form>
+                  )}
+                </div>
+              </section>
+            )
           )}
         </main>
       </div>

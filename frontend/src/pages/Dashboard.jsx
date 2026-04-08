@@ -1,6 +1,6 @@
 import { useEffect, useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
-import { AuthContext } from "../context/AuthContext";
+import { AuthContext } from "../context/auth-context";
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
 import API from "../api/axios";
@@ -17,7 +17,7 @@ function Dashboard() {
   });
   const [recentProjects, setRecentProjects] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { user, logout, loading: authLoading } = useContext(AuthContext);
+  const { logout, loading: authLoading } = useContext(AuthContext);
   const navigate = useNavigate();
 
   useEffect(() => {

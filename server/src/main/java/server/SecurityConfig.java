@@ -1,7 +1,12 @@
 package server;
 
+import java.util.Arrays;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -19,6 +24,9 @@ import server.service.JwtAuthenticationFilter;
 @Configuration
 public class SecurityConfig {
 
+    @Value("${app.cors.allowed-origins:http://localhost:5173}")
+    private String allowedOrigins;
+
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
@@ -32,14 +40,14 @@ public class SecurityConfig {
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
             .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/api/auth/**").permitAll()
-            .requestMatchers("/api/users").permitAll() // Allow signup
-            .requestMatchers("/api/users/me").authenticated()
-            .requestMatchers("/api/users/**").authenticated()
-            .requestMatchers("/api/projects/**").authenticated()
-            .requestMatchers("/api/tasks/**").authenticated()
-            .requestMatchers("/api/submissions/**").authenticated()
-            .anyRequest().permitAll()
+                .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/users").permitAll()
+                .requestMatchers("/api/users/me").authenticated()
+                .requestMatchers("/api/users/**").authenticated()
+                .requestMatchers("/api/projects/**").authenticated()
+                .requestMatchers("/api/tasks/**").authenticated()
+                .requestMatchers("/api/submissions/**").authenticated()
+                .anyRequest().authenticated()
         )
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
@@ -50,9 +58,13 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
+        List<String> origins = Arrays.stream(allowedOrigins.split(","))
+            .map(String::trim)
+            .filter(origin -> !origin.isEmpty())
+            .toList();
 
         config.setAllowCredentials(true);
-        config.addAllowedOrigin("http://localhost:5173"); // React frontend
+        config.setAllowedOrigins(origins);
         config.addAllowedHeader("*");
         config.addAllowedMethod("*");
 

@@ -2,6 +2,7 @@ package server.model;
 
 import java.time.LocalDate;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -28,14 +29,18 @@ public class Task {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String title;
+    // Store as "title" in DB but expose as "name" to match frontend
+    @Column(name = "title")
+    private String name;
 
     private String description;
 
     @Enumerated(EnumType.STRING)
     private TaskStatus status;
 
-    private LocalDate deadline;
+    // Store as "deadline" in DB but expose as "dueDate" to match frontend
+    @Column(name = "deadline")
+    private LocalDate dueDate;
 
     @ManyToOne
     @JoinColumn(name = "project_id")

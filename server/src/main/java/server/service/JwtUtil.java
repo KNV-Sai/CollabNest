@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import io.jsonwebtoken.Claims;
@@ -16,13 +17,13 @@ import io.jsonwebtoken.security.Keys;
 @Component
 public class JwtUtil {
 
-    private static final String SECRET_KEY =
-        "mySecretKeyForJwtTokenGenerationAndValidationInSpringBootApplication";
+    @Value("${app.jwt.secret:mySecretKeyForJwtTokenGenerationAndValidationInSpringBootApplication}")
+    private String secretKey;
 
     private static final int JWT_EXPIRATION = 86400000; // 24 hours
 
     private Key getSignInKey() {
-        return Keys.hmacShaKeyFor(SECRET_KEY.getBytes());
+        return Keys.hmacShaKeyFor(secretKey.getBytes());
     }
 
     public String generateToken(String username) {

@@ -6,8 +6,11 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import server.model.Project;
 import server.model.Task;
+import server.model.TaskStatus;
 import server.model.User;
+import server.repository.ProjectRepository;
 import server.repository.TaskRepository;
 import server.repository.UserRepository;
 
@@ -16,14 +19,19 @@ public class TaskService {
 
     private final TaskRepository taskRepository;
     private final UserRepository userRepository;
+    private final ProjectRepository projectRepository;
 
     @Autowired
-    public TaskService(TaskRepository taskRepository, UserRepository userRepository) {
+    public TaskService(TaskRepository taskRepository, UserRepository userRepository, ProjectRepository projectRepository) {
         this.taskRepository = taskRepository;
         this.userRepository = userRepository;
+        this.projectRepository = projectRepository;
     }
 
     public Task create(Task task) {
+        if (task.getStatus() == null) {
+            task.setStatus(TaskStatus.TODO);
+        }
         return taskRepository.save(task);
     }
 
@@ -43,11 +51,19 @@ public class TaskService {
         return List.of();
     }
 
+    public List<Task> getTasksByProject(Long projectId) {
+        Optional<Project> project = projectRepository.findById(projectId);
+        if (project.isPresent()) {
+            return taskRepository.findByProject(project.get());
+        }
+        return List.of();
+    }
+
     public Optional<Task> update(Long id, Task updatedTask) {
         return taskRepository.findById(id)
             .map(existing -> {
-                if (updatedTask.getTitle() != null) {
-                    existing.setTitle(updatedTask.getTitle());
+                if (updatedTask.getName() != null) {
+                    existing.setName(updatedTask.getName());
                 }
                 if (updatedTask.getDescription() != null) {
                     existing.setDescription(updatedTask.getDescription());
@@ -55,8 +71,8 @@ public class TaskService {
                 if (updatedTask.getStatus() != null) {
                     existing.setStatus(updatedTask.getStatus());
                 }
-                if (updatedTask.getDeadline() != null) {
-                    existing.setDeadline(updatedTask.getDeadline());
+                if (updatedTask.getDueDate() != null) {
+                    existing.setDueDate(updatedTask.getDueDate());
                 }
                 if (updatedTask.getProject() != null) {
                     existing.setProject(updatedTask.getProject());

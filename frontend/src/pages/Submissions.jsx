@@ -1,6 +1,6 @@
 import { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
-import { AuthContext } from "../context/AuthContext";
+import { AuthContext } from "../context/auth-context";
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
 import API from "../api/axios";
@@ -11,12 +11,27 @@ function Submissions() {
   const [userInfo, setUserInfo] = useState(null);
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { user, logout, isTeacher } = useContext(AuthContext);
+  const [error, setError] = useState("");
+  const [projects, setProjects] = useState([]);
+  const [submitForm, setSubmitForm] = useState({
+    projectId: "",
+    title: "",
+    description: "",
+    submissionUrl: "",
+  });
+  const [reviewForms, setReviewForms] = useState({});
+  const [actionMessage, setActionMessage] = useState("");
+  const [actionType, setActionType] = useState("info");
+  const { logout, isTeacher } = useContext(AuthContext);
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchUserInfo();
     fetchSubmissions();
+    if (!isTeacher()) {
+      fetchMyProjects();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchUserInfo = async () => {
@@ -31,23 +46,94 @@ function Submissions() {
   const fetchSubmissions = async () => {
     try {
       setLoading(true);
+      setError("");
       const endpoint = isTeacher() ? "/submissions" : "/submissions/user/me";
-      try {
-        const response = await API.get(endpoint);
-        setSubmissions(response.data || []);
-      } catch (err) {
-        setSubmissions([]);
-      }
+      const response = await API.get(endpoint);
+      setSubmissions(response.data || []);
     } catch (error) {
       console.error("Error fetching submissions:", error);
+      setSubmissions([]);
+      setError("Could not load submissions. Please try again.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchMyProjects = async () => {
+    try {
+      const response = await API.get("/projects/my-projects");
+      setProjects(response.data || []);
+    } catch (err) {
+      console.error("Error loading projects for submission:", err);
     }
   };
 
   const handleLogout = () => {
     logout();
     navigate("/");
+  };
+
+  const normalizeSubmissionForReview = (submission) => ({
+    status: submission.status || "PENDING",
+    feedback: submission.feedback || "",
+    grade: submission.grade ?? "",
+  });
+
+  const getReviewForm = (submission) => {
+    return reviewForms[submission.id] || normalizeSubmissionForReview(submission);
+  };
+
+  const updateReviewForm = (submissionId, field, value) => {
+    setReviewForms((prev) => ({
+      ...prev,
+      [submissionId]: {
+        ...(prev[submissionId] || {}),
+        [field]: value,
+      },
+    }));
+  };
+
+  const handleCreateSubmission = async (e) => {
+    e.preventDefault();
+    setActionMessage("");
+    setActionType("info");
+    try {
+      await API.post("/submissions/my", {
+        ...submitForm,
+        projectId: String(submitForm.projectId),
+      });
+      setActionMessage("Submission sent successfully.");
+      setActionType("success");
+      setSubmitForm({ projectId: "", title: "", description: "", submissionUrl: "" });
+      await fetchSubmissions();
+    } catch (err) {
+      const msg =
+        typeof err.response?.data === "string"
+          ? err.response.data
+          : "Could not submit your work.";
+      setActionMessage(msg);
+      setActionType("error");
+    }
+  };
+
+  const handleReviewSubmission = async (submissionId) => {
+    const form = reviewForms[submissionId];
+    if (!form) return;
+    setActionMessage("");
+    setActionType("info");
+    try {
+      await API.put(`/submissions/${submissionId}/review`, form);
+      setActionMessage("Submission reviewed successfully.");
+      setActionType("success");
+      await fetchSubmissions();
+    } catch (err) {
+      const msg =
+        typeof err.response?.data === "string"
+          ? err.response.data
+          : "Could not review this submission.";
+      setActionMessage(msg);
+      setActionType("error");
+    }
   };
 
   const getStatusBadge = (status) => {
@@ -99,6 +185,71 @@ function Submissions() {
             {isTeacher() && <p style={{ color: "#6b7280", marginTop: "8px" }}>👨‍🏫 Review student submissions</p>}
           </section>
 
+          {actionMessage && (
+            <section
+              style={{
+                marginBottom: "16px",
+                padding: "10px 12px",
+                borderRadius: "8px",
+                color: actionType === "error" ? "#b91c1c" : "#166534",
+                background: actionType === "error" ? "#fee2e2" : "#dcfce7",
+              }}
+            >
+              {actionMessage}
+            </section>
+          )}
+
+          {!isTeacher() && (
+            <section
+              style={{
+                background: "#ffffff",
+                border: "1px solid #e5e7eb",
+                borderRadius: "10px",
+                padding: "16px",
+                marginBottom: "20px",
+              }}
+            >
+              <h3 style={{ marginBottom: "12px" }}>Submit Project Work</h3>
+              <form onSubmit={handleCreateSubmission}>
+                <select
+                  value={submitForm.projectId}
+                  onChange={(e) => setSubmitForm({ ...submitForm, projectId: e.target.value })}
+                  required
+                  style={{ width: "100%", padding: "10px", marginBottom: "10px", borderRadius: "6px", border: "1px solid #d1d5db" }}
+                >
+                  <option value="">Select Project</option>
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="text"
+                  placeholder="Submission title"
+                  value={submitForm.title}
+                  onChange={(e) => setSubmitForm({ ...submitForm, title: e.target.value })}
+                  style={{ width: "100%", padding: "10px", marginBottom: "10px", borderRadius: "6px", border: "1px solid #d1d5db" }}
+                  required
+                />
+                <textarea
+                  placeholder="What did your team complete?"
+                  value={submitForm.description}
+                  onChange={(e) => setSubmitForm({ ...submitForm, description: e.target.value })}
+                  style={{ width: "100%", padding: "10px", marginBottom: "10px", borderRadius: "6px", border: "1px solid #d1d5db", minHeight: "90px" }}
+                />
+                <input
+                  type="url"
+                  placeholder="Submission link (Drive/GitHub/etc)"
+                  value={submitForm.submissionUrl}
+                  onChange={(e) => setSubmitForm({ ...submitForm, submissionUrl: e.target.value })}
+                  style={{ width: "100%", padding: "10px", marginBottom: "10px", borderRadius: "6px", border: "1px solid #d1d5db" }}
+                />
+                <button type="submit" className="cta-button">Submit Work</button>
+              </form>
+            </section>
+          )}
+
           {/* Submission Stats */}
           <section className="summary-cards">
             <article className="summary-card">
@@ -134,7 +285,13 @@ function Submissions() {
             </article>
           </section>
 
-          {submissions.length === 0 ? (
+          {error ? (
+            <section className="empty-state">
+              <div className="empty-icon">⚠️</div>
+              <h3>Unable to Load Submissions</h3>
+              <p>{error}</p>
+            </section>
+          ) : submissions.length === 0 ? (
             <section className="empty-state">
               <div className="empty-icon">📤</div>
               <h3>No Submissions</h3>
@@ -149,9 +306,9 @@ function Submissions() {
                     <div key={submission.id} className="submission-card">
                       <div className="submission-header">
                         <div>
-                          <h4>{submission.projectName || "Project"}</h4>
+                          <h4>{submission.project?.name || submission.projectName || "Project"}</h4>
                           <p className="submission-date">
-                            📅 Submitted: {new Date(submission.submittedAt).toLocaleDateString()}
+                            📅 Submitted: {submission.submittedAt ? new Date(submission.submittedAt).toLocaleDateString() : "-"}
                           </p>
                         </div>
                         <span
@@ -173,7 +330,7 @@ function Submissions() {
                         {submission.submittedBy && (
                           <div>
                             <p className="label">Submitted By:</p>
-                            <p>{submission.submittedBy}</p>
+                            <p>{submission.submittedBy.name || submission.submittedBy.email || "-"}</p>
                           </div>
                         )}
 
@@ -209,6 +366,45 @@ function Submissions() {
                           </p>
                         )}
                       </div>
+
+                      {isTeacher() && (
+                        <div style={{ marginTop: "14px", borderTop: "1px solid #e5e7eb", paddingTop: "12px" }}>
+                          <p style={{ marginBottom: "8px", fontWeight: 600 }}>Review & Grade</p>
+                          <div style={{ display: "grid", gap: "8px" }}>
+                            <select
+                              value={getReviewForm(submission).status}
+                              onChange={(e) => updateReviewForm(submission.id, "status", e.target.value)}
+                              style={{ padding: "8px", borderRadius: "6px", border: "1px solid #d1d5db" }}
+                            >
+                              <option value="PENDING">Pending</option>
+                              <option value="APPROVED">Approved</option>
+                              <option value="REJECTED">Rejected</option>
+                            </select>
+                            <textarea
+                              value={getReviewForm(submission).feedback}
+                              onChange={(e) => updateReviewForm(submission.id, "feedback", e.target.value)}
+                              placeholder="Feedback for student"
+                              style={{ padding: "8px", borderRadius: "6px", border: "1px solid #d1d5db", minHeight: "70px" }}
+                            />
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              step="0.5"
+                              value={getReviewForm(submission).grade}
+                              onChange={(e) => updateReviewForm(submission.id, "grade", e.target.value)}
+                              placeholder="Grade (0-100)"
+                              style={{ padding: "8px", borderRadius: "6px", border: "1px solid #d1d5db" }}
+                            />
+                            <button
+                              className="cta-button"
+                              onClick={() => handleReviewSubmission(submission.id)}
+                            >
+                              Save Review
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}

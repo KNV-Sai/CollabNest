@@ -59,11 +59,17 @@ public class UserService {
         return userRepository.findById(id)
             .map(existing -> {
 
-                existing.setName(updatedUser.getName());
-                existing.setEmail(updatedUser.getEmail());
+                if (updatedUser.getName() != null) {
+                    existing.setName(updatedUser.getName());
+                }
+                if (updatedUser.getEmail() != null) {
+                    existing.setEmail(updatedUser.getEmail());
+                }
 
-                // 🔐 Always encode password
-                existing.setPassword(passwordEncoder.encode(updatedUser.getPassword()));
+                // Encode password only when explicitly provided
+                if (updatedUser.getPassword() != null && !updatedUser.getPassword().isBlank()) {
+                    existing.setPassword(passwordEncoder.encode(updatedUser.getPassword()));
+                }
 
                 // ❌ DO NOT allow role change from frontend
                 // existing.setRole(updatedUser.getRole());

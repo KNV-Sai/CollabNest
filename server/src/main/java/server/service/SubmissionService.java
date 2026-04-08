@@ -41,6 +41,53 @@ public class SubmissionService {
         return submissionRepository.save(submission);
     }
 
+    public Optional<Submission> createForStudent(Long studentId, Long projectId, String title, String description, String submissionUrl) {
+        Optional<User> userOpt = userRepository.findById(studentId);
+        Optional<Project> projectOpt = projectRepository.findById(projectId);
+
+        if (userOpt.isEmpty() || projectOpt.isEmpty()) {
+            return Optional.empty();
+        }
+
+        User student = userOpt.get();
+        Project project = projectOpt.get();
+
+        // Student must be assigned to the project before submitting work
+        if (project.getUsers() == null || !project.getUsers().contains(student)) {
+            return Optional.empty();
+        }
+
+        Submission submission = Submission.builder()
+            .project(project)
+            .submittedBy(student)
+            .title(title)
+            .description(description)
+            .submissionUrl(submissionUrl)
+            .status(SubmissionStatus.SUBMITTED)
+            .submittedAt(LocalDateTime.now())
+            .build();
+
+        return Optional.of(submissionRepository.save(submission));
+    }
+
+    public Optional<Submission> reviewSubmission(Long submissionId, User reviewer, SubmissionStatus status, String feedback, Double grade) {
+        return submissionRepository.findById(submissionId)
+            .map(existing -> {
+                if (status != null) {
+                    existing.setStatus(status);
+                }
+                if (feedback != null) {
+                    existing.setFeedback(feedback);
+                }
+                if (grade != null) {
+                    existing.setGrade(grade);
+                }
+                existing.setReviewedBy(reviewer);
+                existing.setReviewedAt(LocalDateTime.now());
+                return submissionRepository.save(existing);
+            });
+    }
+
     public List<Submission> getAll() {
         return submissionRepository.findAll();
     }

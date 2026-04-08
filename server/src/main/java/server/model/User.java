@@ -1,6 +1,7 @@
 package server.model;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 import java.util.HashSet;
 import java.util.Set;
@@ -22,6 +23,7 @@ public class User {
 
     private String email;
 
+    @JsonIgnore
     private String password;
 
     @Enumerated(EnumType.STRING)
