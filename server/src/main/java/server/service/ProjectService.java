@@ -43,11 +43,7 @@ public class ProjectService {
     }
 
     public List<Project> getProjectsByUser(Long userId) {
-        Optional<User> user = userRepository.findById(userId);
-        if (user.isPresent()) {
-            return projectRepository.findByUsers(user.get());
-        }
-        return List.of();
+        return projectRepository.findByUsers_Id(userId);
     }
 
     public Optional<Project> update(Long id, Project updatedProject) {
@@ -86,7 +82,9 @@ public class ProjectService {
             student.setProjects(new HashSet<>());
         }
 
-        if (project.getUsers().contains(student)) {
+        boolean alreadyAssigned = project.getUsers().stream()
+            .anyMatch(existing -> existing.getId() != null && existing.getId().equals(studentId));
+        if (alreadyAssigned) {
             return false;
         }
 

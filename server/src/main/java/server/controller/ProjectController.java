@@ -103,9 +103,8 @@ public class ProjectController {
                 return ResponseEntity.notFound().build();
             }
 
-            // Check if student is already assigned
-            if (project.getUsers() != null && project.getUsers().contains(student)) {
-                return ResponseEntity.badRequest().build();
+            if (student.getRole() != Role.STUDENT) {
+                return ResponseEntity.badRequest().body("Only students can be assigned to projects");
             }
 
             // Assign the student
@@ -145,10 +144,6 @@ public class ProjectController {
         }
         if (student.getRole() != Role.STUDENT) {
             return ResponseEntity.badRequest().body("Only students can be assigned to projects");
-        }
-
-        if (project.getUsers() != null && project.getUsers().contains(student)) {
-            return ResponseEntity.badRequest().body("Student already assigned to this project");
         }
 
         boolean assigned = projectService.assignStudent(projectId, student.getId());

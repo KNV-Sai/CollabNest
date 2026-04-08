@@ -2,6 +2,7 @@ package server.model;
 
 import jakarta.persistence.*;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.*;
 import java.util.HashSet;
 import java.util.Set;
@@ -12,6 +13,7 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 
 public class User {
 
@@ -40,6 +42,7 @@ public class User {
         joinColumns = @JoinColumn(name = "user_id"),
         inverseJoinColumns = @JoinColumn(name = "project_id")
     )
+    @JsonIgnoreProperties({"users", "tasks"})
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private Set<Project> projects = new HashSet<>();
