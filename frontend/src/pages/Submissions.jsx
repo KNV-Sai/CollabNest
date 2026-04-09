@@ -129,6 +129,11 @@ function Submissions() {
       await API.put(`/submissions/${submissionId}/review`, form);
       setActionMessage("Submission reviewed successfully.");
       setActionType("success");
+      setReviewForms((prev) => {
+        const next = { ...prev };
+        delete next[submissionId];
+        return next;
+      });
       await fetchSubmissions();
     } catch (err) {
       const msg =
@@ -173,9 +178,11 @@ function Submissions() {
 
   const stats = {
     total: submissions.length,
-    approved: submissions.filter((s) => s.status?.toLowerCase() === "approved").length,
-    pending: submissions.filter((s) => s.status?.toLowerCase() === "pending").length,
-    rejected: submissions.filter((s) => s.status?.toLowerCase() === "rejected").length,
+    approved: submissions.filter((s) => s.status === "APPROVED").length,
+    pending: isTeacher()
+      ? submissions.filter((s) => !s.reviewedAt).length
+      : submissions.filter((s) => s.status === "SUBMITTED").length,
+    rejected: submissions.filter((s) => s.status === "REJECTED").length,
   };
 
   const gradedSubmissions = submissions.filter((s) => typeof s.grade === "number");
@@ -191,8 +198,16 @@ function Submissions() {
     statusFilter === "ALL"
       ? sortedSubmissions
       : sortedSubmissions.filter((submission) => submission.status === statusFilter);
-  const recentSubmissions = visibleByStatus.slice(0, 3);
-  const pastSubmissions = visibleByStatus.slice(3);
+
+  const toReviewSubmissions = isTeacher()
+    ? visibleByStatus.filter((s) => !s.reviewedAt)
+    : [];
+  const reviewedSubmissions = isTeacher()
+    ? visibleByStatus.filter((s) => s.reviewedAt)
+    : [];
+
+  const recentSubmissions = isTeacher() ? toReviewSubmissions : visibleByStatus.slice(0, 3);
+  const pastSubmissions = isTeacher() ? reviewedSubmissions : visibleByStatus.slice(3);
 
   return (
     <div className="dashboard-wrapper">
@@ -360,9 +375,16 @@ function Submissions() {
             <>
             <section className="submissions-section">
               <div className="section-header">
-                <h3>Recent Submissions</h3>
+                <h3>{isTeacher() ? "Submissions to Review" : "Recent Submissions"}</h3>
               </div>
               <div className="submissions-list">
+                {isTeacher() && recentSubmissions.length === 0 && (
+                  <section className="empty-state" style={{ width: "100%" }}>
+                    <div className="empty-icon">✅</div>
+                    <h3>All Caught Up</h3>
+                    <p>No submissions are awaiting review.</p>
+                  </section>
+                )}
                 {recentSubmissions.map((submission) => {
                   const badgeInfo = getStatusBadge(submission.status);
                   const submittedDate = submission.submittedAt
@@ -501,7 +523,8 @@ function Submissions() {
                   className="filter-btn"
                   onClick={() => setShowPastSubmissions((prev) => !prev)}
                 >
-                  {showPastSubmissions ? "Hide" : "Show"} Past Submissions ({pastSubmissions.length})
+                  {showPastSubmissions ? "Hide" : "Show"}{" "}
+                  {isTeacher() ? "Past Reviewed Submissions" : "Past Submissions"} ({pastSubmissions.length})
                 </button>
                 {showPastSubmissions && (
                   <div className="submissions-list" style={{ marginTop: "14px" }}>
@@ -530,6 +553,20 @@ function Submissions() {
                               <div className="submission-section">
                                 <p className="label">Description:</p>
                                 <p className="section-text">{submission.description}</p>
+                              </div>
+                            )}
+
+                            {isTeacher() && submission.feedback && (
+                              <div className="feedback-box submission-section">
+                                <p className="label">Feedback:</p>
+                                <p className="section-text">{submission.feedback}</p>
+                              </div>
+                            )}
+
+                            {typeof submission.grade === "number" && (
+                              <div className="grade-box submission-section">
+                                <p className="label">Grade:</p>
+                                <p className="grade-value">{submission.grade}%</p>
                               </div>
                             )}
                           </div>
