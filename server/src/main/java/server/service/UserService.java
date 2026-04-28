@@ -31,11 +31,16 @@ public class UserService {
             throw new RuntimeException("User already exists");
         }
 
+        // ❗ Ensure password is provided
+        if (user.getPassword() == null || user.getPassword().isBlank()) {
+            throw new RuntimeException("Password cannot be null or empty");
+        }
+
         // 🔐 Encode password
         user.setPassword(passwordEncoder.encode(user.getPassword()));
 
-        // ✅ If role is not specified or not ADMIN, default to STUDENT
-        if (user.getRole() == null || user.getRole() != Role.ADMIN) {
+        // ✅ Default role (never trust frontend)
+        if (user.getRole() == null) {
             user.setRole(Role.STUDENT);
         }
 
@@ -62,16 +67,17 @@ public class UserService {
                 if (updatedUser.getName() != null) {
                     existing.setName(updatedUser.getName());
                 }
+
                 if (updatedUser.getEmail() != null) {
                     existing.setEmail(updatedUser.getEmail());
                 }
 
-                // Encode password only when explicitly provided
+                // 🔐 Encode password only if provided
                 if (updatedUser.getPassword() != null && !updatedUser.getPassword().isBlank()) {
                     existing.setPassword(passwordEncoder.encode(updatedUser.getPassword()));
                 }
 
-                // ❌ DO NOT allow role change from frontend
+                // ❌ Do NOT allow role updates from frontend
                 // existing.setRole(updatedUser.getRole());
 
                 return userRepository.save(existing);
