@@ -1,8 +1,5 @@
 package server;
 
-import java.util.Arrays;
-import java.util.List;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -56,23 +53,19 @@ public class SecurityConfig {
 
     // ✅ CORS CONFIGURATION (IMPORTANT)
     @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration config = new CorsConfiguration();
-        List<String> origins = Arrays.stream(allowedOrigins.split(","))
-            .map(String::trim)
-            .filter(origin -> !origin.isEmpty())
-            .toList();
+public CorsConfigurationSource corsConfigurationSource() {
+    CorsConfiguration config = new CorsConfiguration();
 
-        config.setAllowCredentials(true);
-        config.setAllowedOrigins(origins);
-        config.addAllowedHeader("*");
-        config.addAllowedMethod("*");
+    config.setAllowCredentials(true);
+    config.addAllowedOriginPattern("*"); // 🔥 TEMP FIX
+    config.addAllowedHeader("*");
+    config.addAllowedMethod("*");
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
+    UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+    source.registerCorsConfiguration("/**", config);
 
-        return source;
-    }
+    return source;
+}
 
     @Bean
     public PasswordEncoder passwordEncoder() {
