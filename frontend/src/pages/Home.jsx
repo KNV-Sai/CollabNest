@@ -120,7 +120,7 @@ function Home() {
       </section>
 
       {/* Stats Section */}
-      <section className="stats-section">
+      <section className="stats-section" id="about">
         <div className="stats-container">
           {stats.map((stat, index) => (
             <div key={index} className="stat-item">
@@ -132,7 +132,7 @@ function Home() {
       </section>
 
       {/* Features Section */}
-      <section className="features-section">
+      <section className="features-section" id="features">
         <div className="features-header">
           <h2>Powerful Features</h2>
           <p>Everything you need to manage group projects effectively</p>
@@ -150,7 +150,7 @@ function Home() {
       </section>
 
       {/* CTA Section */}
-      <section className="cta-section">
+      <section className="cta-section" id="pricing">
         <div className="cta-content">
           <h2>Ready to transform your team collaboration?</h2>
           <p>Join thousands of students already using CollabNest for their group projects.</p>

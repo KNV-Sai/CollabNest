@@ -1,8 +1,8 @@
 package server.model;
 
 import jakarta.persistence.*;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 import java.util.HashSet;
 import java.util.Set;
@@ -25,7 +25,7 @@ public class User {
 
     private String email;
 
-    @JsonIgnore
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
 
     @Enumerated(EnumType.STRING)
@@ -34,6 +34,7 @@ public class User {
     @OneToMany(mappedBy = "assignee", cascade = CascadeType.ALL, orphanRemoval = true)
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
+    @Builder.Default
     private Set<Task> tasks = new HashSet<>();
 
     @ManyToMany
@@ -45,5 +46,6 @@ public class User {
     @JsonIgnoreProperties({"users", "tasks"})
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
+    @Builder.Default
     private Set<Project> projects = new HashSet<>();
 }

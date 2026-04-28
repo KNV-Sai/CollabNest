@@ -4,6 +4,7 @@ import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -48,8 +49,16 @@ public class AuthController {
             User created = userService.create(user);
             String token = jwtUtil.generateToken(created.getEmail());
             return ResponseEntity.status(201).body(new LoginResponse(token, created.getId(), created.getName(), created.getEmail(), created.getRole().toString()));
-        } catch (RuntimeException e) {
+        } catch (DataIntegrityViolationException e) {
             return ResponseEntity.status(409).body("Email already exists");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (RuntimeException e) {
+            String msg = e.getMessage();
+            if (msg != null && msg.toLowerCase().contains("already exists")) {
+                return ResponseEntity.status(409).body("Email already exists");
+            }
+            return ResponseEntity.status(500).body(msg != null ? msg : "Signup failed");
         }
     }
 }

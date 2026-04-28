@@ -26,6 +26,16 @@ public class UserService {
     // ✅ CREATE USER (SIGNUP)
     public User create(User user) {
 
+        if (user == null) {
+            throw new IllegalArgumentException("User payload is required");
+        }
+
+        if (user.getEmail() == null || user.getEmail().isBlank()) {
+            throw new IllegalArgumentException("Email cannot be null or empty");
+        }
+
+        user.setEmail(user.getEmail().trim().toLowerCase());
+
         // 🔴 Check if user already exists
         if (userRepository.findByEmail(user.getEmail()).isPresent()) {
             throw new RuntimeException("User already exists");
@@ -33,7 +43,7 @@ public class UserService {
 
         // ❗ Ensure password is provided
         if (user.getPassword() == null || user.getPassword().isBlank()) {
-            throw new RuntimeException("Password cannot be null or empty");
+            throw new IllegalArgumentException("Password cannot be null or empty");
         }
 
         // 🔐 Encode password
